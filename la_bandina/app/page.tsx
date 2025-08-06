@@ -5,7 +5,8 @@ import * as Tone from "tone"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Play, Square, RotateCcw, Volume2 } from "lucide-react"
+import { Play, Square, RotateCcw, Volume2, Settings } from "lucide-react"
+import Link from "next/link"
 
 // Tipos para las notas y escalas
 type Note = string
@@ -17,8 +18,8 @@ interface RecordedNote {
   duration: number
 }
 
-// Mapeo de teclas del teclado físico a notas (expandido para múltiples octavas)
-const KEY_MAPPING: { [key: string]: { note: string; octaveOffset: number } } = {
+// Mapeo por defecto de teclas del teclado físico a notas
+const DEFAULT_KEY_MAPPING: { [key: string]: { note: string; octaveOffset: number } } = {
   // Primera octava (octava base)
   a: { note: "C", octaveOffset: 0 },
   w: { note: "C#", octaveOffset: 0 },
@@ -60,9 +61,22 @@ export default function VirtualPiano() {
   const [isPlaying, setIsPlaying] = useState(false)
   const [volume, setVolume] = useState(-10)
   const [audioInitialized, setAudioInitialized] = useState(false)
+  const [keyMapping, setKeyMapping] = useState(DEFAULT_KEY_MAPPING)
 
   const recordingStartTime = useRef<number>(0)
   const pressedNotesRef = useRef<Map<string, number>>(new Map())
+
+  // Cargar configuración de teclas desde localStorage
+  useEffect(() => {
+    const savedMapping = localStorage.getItem("pianoKeyMapping")
+    if (savedMapping) {
+      try {
+        setKeyMapping(JSON.parse(savedMapping))
+      } catch (error) {
+        console.error("Error loading saved key mapping:", error)
+      }
+    }
+  }, [])
 
   // Inicializar el sintetizador
   const initAudio = async () => {
@@ -206,8 +220,8 @@ export default function VirtualPiano() {
   useEffect(() => {
     const handleKeyDown = async (event: KeyboardEvent) => {
       const key = event.key.toLowerCase()
-      if (KEY_MAPPING[key]) {
-        const { note, octaveOffset } = KEY_MAPPING[key]
+      if (keyMapping[key]) {
+        const { note, octaveOffset } = keyMapping[key]
         const targetOctave = currentOctave + octaveOffset
         const noteKey = `${note}-${targetOctave}`
         
@@ -223,8 +237,8 @@ export default function VirtualPiano() {
 
     const handleKeyUp = (event: KeyboardEvent) => {
       const key = event.key.toLowerCase()
-      if (KEY_MAPPING[key]) {
-        const { note, octaveOffset } = KEY_MAPPING[key]
+      if (keyMapping[key]) {
+        const { note, octaveOffset } = keyMapping[key]
         const targetOctave = currentOctave + octaveOffset
         event.preventDefault()
         releaseNoteWithOctave(note, targetOctave)
@@ -238,7 +252,7 @@ export default function VirtualPiano() {
       window.removeEventListener("keydown", handleKeyDown)
       window.removeEventListener("keyup", handleKeyUp)
     }
-  }, [playNoteWithOctave, releaseNoteWithOctave, pressedKeys, currentOctave, audioInitialized, initAudio])
+  }, [playNoteWithOctave, releaseNoteWithOctave, pressedKeys, currentOctave, audioInitialized, initAudio, keyMapping])
 
   // Iniciar grabación
   const startRecording = () => {
@@ -319,8 +333,8 @@ export default function VirtualPiano() {
   }) => {
     const noteKey = `${note}-${octave}`
     const isPressed = pressedKeys.has(noteKey)
-    const keyboardKey = Object.keys(KEY_MAPPING).find((k) => {
-      const mapping = KEY_MAPPING[k]
+    const keyboardKey = Object.keys(keyMapping).find((k) => {
+      const mapping = keyMapping[k]
       return mapping.note === note && (currentOctave + mapping.octaveOffset) === octave
     })
 
@@ -422,9 +436,17 @@ export default function VirtualPiano() {
         {/* Header */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-3xl font-bold text-center bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-              🎹 Piano Virtual Interactivo
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+                🎹 Piano Virtual Interactivo
+              </CardTitle>
+              <Link href="/config">
+                <Button variant="outline">
+                  <Settings className="w-4 h-4 mr-2" />
+                  Configurar Teclas
+                </Button>
+              </Link>
+            </div>
           </CardHeader>
         </Card>
 
@@ -588,7 +610,7 @@ export default function VirtualPiano() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600">
               <div>
                 <p>
-                  <strong>Teclado físico:</strong> A-J (primera octava), K-' (segunda octava)
+                  <strong>Teclado físico:</strong> Usa las teclas configuradas (por defecto: A-J primera octava, K-' segunda octava)
                 </p>
                 <p>
                   <strong>Mouse/Touch:</strong> Haz clic en las teclas del piano
@@ -599,7 +621,7 @@ export default function VirtualPiano() {
                   <strong>Octavas:</strong> Configura 1-4 octavas simultáneas
                 </p>
                 <p>
-                  <strong>Escalas:</strong> Cromática (todas las notas), Mayor, Menor
+                  <strong>Configuración:</strong> Personaliza el mapeo de teclas en el botón "Configurar Teclas"
                 </p>
               </div>
             </div>
