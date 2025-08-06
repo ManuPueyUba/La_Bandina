@@ -371,10 +371,19 @@ export default function VirtualPiano() {
           releaseNoteWithOctave(note, octave)
         }}
       >
+        {/* Mostrar información en teclas blancas */}
         {!isBlack && (
           <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 text-xs text-gray-500">
             <div>{keyboardKey?.toUpperCase()}</div>
             <div className="text-[10px] text-gray-400">{note}{octave}</div>
+          </div>
+        )}
+        
+        {/* Mostrar información en teclas negras */}
+        {isBlack && keyboardKey && (
+          <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 text-xs text-white">
+            <div className="font-semibold">{keyboardKey.toUpperCase()}</div>
+            <div className="text-[10px] text-gray-300">{note}{octave}</div>
           </div>
         )}
       </button>
