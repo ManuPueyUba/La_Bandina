@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Play, Square, RotateCcw, Volume2, Settings } from "lucide-react"
 import Link from "next/link"
+import { AuthButton } from "@/components/auth/AuthButton"
 
 // Tipos para las notas y escalas
 type Note = string
@@ -449,12 +450,15 @@ export default function VirtualPiano() {
               <CardTitle className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
                 🎹 Piano Virtual Interactivo
               </CardTitle>
-              <Link href="/config">
-                <Button variant="outline">
-                  <Settings className="w-4 h-4 mr-2" />
-                  Configurar Teclas
-                </Button>
-              </Link>
+              <div className="flex items-center gap-3">
+                <AuthButton />
+                <Link href="/config">
+                  <Button variant="outline">
+                    <Settings className="w-4 h-4 mr-2" />
+                    Configurar Teclas
+                  </Button>
+                </Link>
+              </div>
             </div>
           </CardHeader>
         </Card>
