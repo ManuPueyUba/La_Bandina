@@ -13,6 +13,7 @@ import Link from 'next/link';
 export default function SongsPage() {
   const [favorites, setFavorites] = useState<string[]>([]);
   const [showTutorial, setShowTutorial] = useState(false);
+  const [customSongs, setCustomSongs] = useState<Song[]>([]);
 
   const {
     currentSong,
@@ -36,12 +37,23 @@ export default function SongsPage() {
     if (savedFavorites) {
       setFavorites(JSON.parse(savedFavorites));
     }
+
+    // Load custom songs from localStorage
+    const savedCustomSongs = localStorage.getItem('customSongs');
+    if (savedCustomSongs) {
+      setCustomSongs(JSON.parse(savedCustomSongs));
+    }
   }, []);
 
   // Save favorites to localStorage
   useEffect(() => {
     localStorage.setItem('songFavorites', JSON.stringify(favorites));
   }, [favorites]);
+
+  // Save custom songs to localStorage
+  useEffect(() => {
+    localStorage.setItem('customSongs', JSON.stringify(customSongs));
+  }, [customSongs]);
 
   // Exponer las teclas resaltadas para el piano
   useEffect(() => {
@@ -98,6 +110,15 @@ export default function SongsPage() {
   const handleViewOtherSongs = useCallback(() => {
     handleBackToLibrary();
   }, [handleBackToLibrary]);
+
+  const handleAddCustomSongs = useCallback((newSongs: Song[]) => {
+    setCustomSongs(prev => {
+      // Evitar duplicados basándose en el ID
+      const existingIds = new Set(prev.map(song => song.id));
+      const uniqueNewSongs = newSongs.filter(song => !existingIds.has(song.id));
+      return [...prev, ...uniqueNewSongs];
+    });
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -172,6 +193,8 @@ export default function SongsPage() {
               onSelectSong={handleSelectSong}
               favorites={favorites}
               onToggleFavorite={handleToggleFavorite}
+              customSongs={customSongs}
+              onAddCustomSongs={handleAddCustomSongs}
             />
           )}
         </div>

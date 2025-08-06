@@ -35,3 +35,23 @@ export interface TutorialState {
   showUpcomingNotes: boolean;
   highlightColor: string;
 }
+
+export interface Recording {
+  id: string;
+  title: string;
+  artist: string;
+  createdAt: Date;
+  duration: number;
+  notes: Note[];
+  bpm?: number;
+  keySignature?: string;
+  description?: string;
+}
+
+export interface RecordingState {
+  isRecording: boolean;
+  isPaused: boolean;
+  startTime: number | null;
+  currentNotes: Note[];
+  duration: number;
+}

@@ -6,21 +6,34 @@ import { sampleSongs, songCategories, difficultyLevels } from '@/data/songs';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Play, Star, Clock, BarChart3 } from 'lucide-react';
+import { Search, Play, Star, Clock, BarChart3, Upload, Music } from 'lucide-react';
+import { MidiImportDialog } from './MidiImportDialog';
 
 interface SongLibraryProps {
   onSelectSong: (song: Song) => void;
   favorites: string[];
   onToggleFavorite: (songId: string) => void;
+  customSongs?: Song[];
+  onAddCustomSongs?: (songs: Song[]) => void;
 }
 
-export default function SongLibrary({ onSelectSong, favorites, onToggleFavorite }: SongLibraryProps) {
+export default function SongLibrary({ 
+  onSelectSong, 
+  favorites, 
+  onToggleFavorite, 
+  customSongs = [], 
+  onAddCustomSongs 
+}: SongLibraryProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Todas');
   const [selectedDifficulty, setSelectedDifficulty] = useState('all');
+  const [showMidiImport, setShowMidiImport] = useState(false);
+
+  // Combinar canciones de muestra con canciones importadas
+  const allSongs = useMemo(() => [...sampleSongs, ...customSongs], [customSongs]);
 
   const filteredSongs = useMemo(() => {
-    return sampleSongs.filter(song => {
+    return allSongs.filter(song => {
       const matchesSearch = song.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            song.artist.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesCategory = selectedCategory === 'Todas' || song.category === selectedCategory;
@@ -28,7 +41,7 @@ export default function SongLibrary({ onSelectSong, favorites, onToggleFavorite 
       
       return matchesSearch && matchesCategory && matchesDifficulty;
     });
-  }, [searchTerm, selectedCategory, selectedDifficulty]);
+  }, [allSongs, searchTerm, selectedCategory, selectedDifficulty]);
 
   const getDifficultyInfo = (difficulty: string) => {
     return difficultyLevels.find(level => level.value === difficulty) || difficultyLevels[0];
@@ -40,8 +53,39 @@ export default function SongLibrary({ onSelectSong, favorites, onToggleFavorite 
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
+  const handleMidiImport = (songs: Song[]) => {
+    if (onAddCustomSongs) {
+      onAddCustomSongs(songs);
+    }
+    setShowMidiImport(false);
+  };
+
   return (
     <div className="space-y-6">
+      {/* Header with Import Button */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900">Biblioteca de Canciones</h2>
+          <p className="text-gray-600">
+            {allSongs.length} canciones disponibles
+            {customSongs.length > 0 && (
+              <span className="ml-2 text-blue-600">
+                ({customSongs.length} importadas)
+              </span>
+            )}
+          </p>
+        </div>
+        {onAddCustomSongs && (
+          <Button 
+            onClick={() => setShowMidiImport(true)}
+            className="flex items-center gap-2"
+          >
+            <Upload className="w-4 h-4" />
+            Importar MIDI
+          </Button>
+        )}
+      </div>
+
       {/* Search and Filters */}
       <div className="space-y-4">
         <div className="relative">
@@ -113,6 +157,12 @@ export default function SongLibrary({ onSelectSong, favorites, onToggleFavorite 
                     <p className="text-sm text-gray-600 truncate">
                       {song.artist}
                     </p>
+                    {customSongs.includes(song) && (
+                      <div className="flex items-center gap-1 mt-1">
+                        <Music className="w-3 h-3 text-blue-500" />
+                        <span className="text-xs text-blue-500">Importada</span>
+                      </div>
+                    )}
                   </div>
                   <button
                     onClick={() => onToggleFavorite(song.id)}
@@ -175,7 +225,33 @@ export default function SongLibrary({ onSelectSong, favorites, onToggleFavorite 
           <p className="text-gray-500">
             No se encontraron canciones que coincidan con los filtros.
           </p>
+          {searchTerm === '' && selectedCategory === 'Todas' && selectedDifficulty === 'all' && allSongs.length === 0 && (
+            <div className="mt-4">
+              <p className="text-gray-400 mb-4">
+                ¡Comienza importando archivos MIDI para expandir tu biblioteca!
+              </p>
+              {onAddCustomSongs && (
+                <Button 
+                  onClick={() => setShowMidiImport(true)}
+                  variant="outline"
+                  className="flex items-center gap-2"
+                >
+                  <Upload className="w-4 h-4" />
+                  Importar MIDI
+                </Button>
+              )}
+            </div>
+          )}
         </div>
+      )}
+
+      {/* MIDI Import Dialog */}
+      {showMidiImport && (
+        <MidiImportDialog
+          isOpen={showMidiImport}
+          onClose={() => setShowMidiImport(false)}
+          onSongsImported={handleMidiImport}
+        />
       )}
     </div>
   );

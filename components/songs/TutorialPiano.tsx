@@ -6,9 +6,10 @@ import * as Tone from 'tone';
 interface TutorialPianoProps {
   highlightedKeys: Set<string>;
   onKeyPress?: (key: string) => void;
+  onKeyRelease?: (key: string) => void;
 }
 
-export default function TutorialPiano({ highlightedKeys, onKeyPress }: TutorialPianoProps) {
+export default function TutorialPiano({ highlightedKeys, onKeyPress, onKeyRelease }: TutorialPianoProps) {
   const [synth, setSynth] = useState<Tone.PolySynth | null>(null);
   const [pressedKeys, setPressedKeys] = useState<Set<string>>(new Set());
   const [audioInitialized, setAudioInitialized] = useState(false);
@@ -202,6 +203,10 @@ export default function TutorialPiano({ highlightedKeys, onKeyPress }: TutorialP
         if (pressedKeys.has(noteWithOctave)) {
           event.preventDefault();
           releaseNote(noteWithOctave);
+          // Notificar al componente padre sobre el release
+          if (onKeyRelease) {
+            onKeyRelease(noteWithOctave);
+          }
         }
       }
     };
@@ -254,8 +259,18 @@ export default function TutorialPiano({ highlightedKeys, onKeyPress }: TutorialP
           }
           playNote(noteWithOctave);
         }}
-        onMouseUp={() => releaseNote(noteWithOctave)}
-        onMouseLeave={() => releaseNote(noteWithOctave)}
+        onMouseUp={() => {
+          releaseNote(noteWithOctave);
+          if (onKeyRelease) {
+            onKeyRelease(noteWithOctave);
+          }
+        }}
+        onMouseLeave={() => {
+          releaseNote(noteWithOctave);
+          if (onKeyRelease) {
+            onKeyRelease(noteWithOctave);
+          }
+        }}
         onTouchStart={async (e) => {
           e.preventDefault();
           if (!audioInitialized) {
@@ -266,6 +281,9 @@ export default function TutorialPiano({ highlightedKeys, onKeyPress }: TutorialP
         onTouchEnd={(e) => {
           e.preventDefault();
           releaseNote(noteWithOctave);
+          if (onKeyRelease) {
+            onKeyRelease(noteWithOctave);
+          }
         }}
       >
         {/* Mostrar información en teclas blancas */}

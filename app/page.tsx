@@ -5,7 +5,7 @@ import * as Tone from "tone"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Play, Square, RotateCcw, Volume2, Settings, Music } from "lucide-react"
+import { Play, Square, RotateCcw, Volume2, Settings, Music, Mic } from "lucide-react"
 import Link from "next/link"
 import { AuthButton } from "@/components/auth/AuthButton"
 
@@ -550,6 +550,12 @@ export default function VirtualPiano() {
                   <Button variant="outline">
                     <Music className="w-4 h-4 mr-2" />
                     Canciones
+                  </Button>
+                </Link>
+                <Link href="/recording">
+                  <Button variant="outline">
+                    <Mic className="w-4 h-4 mr-2" />
+                    Grabar
                   </Button>
                 </Link>
                 <Link href="/config">
