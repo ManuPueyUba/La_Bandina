@@ -21,7 +21,7 @@ interface RecordedNote {
 
 // Mapeo por defecto de teclas del teclado físico a notas
 const DEFAULT_KEY_MAPPING: { [key: string]: { note: string; octaveOffset: number } } = {
-  // Primera octava (octava base)
+  // Octava base (octaveOffset: 0)
   a: { note: "C", octaveOffset: 0 },
   w: { note: "C#", octaveOffset: 0 },
   s: { note: "D", octaveOffset: 0 },
@@ -35,13 +35,24 @@ const DEFAULT_KEY_MAPPING: { [key: string]: { note: string; octaveOffset: number
   u: { note: "A#", octaveOffset: 0 },
   j: { note: "B", octaveOffset: 0 },
   
-  // Segunda octava (octava base + 1)
+  // Primera octava superior (octaveOffset: 1)
   k: { note: "C", octaveOffset: 1 },
   o: { note: "C#", octaveOffset: 1 },
   l: { note: "D", octaveOffset: 1 },
   p: { note: "D#", octaveOffset: 1 },
   ";": { note: "E", octaveOffset: 1 },
-  "'": { note: "F", octaveOffset: 1 },
+  z: { note: "F", octaveOffset: 1 },
+  x: { note: "G", octaveOffset: 1 },
+  c: { note: "A", octaveOffset: 1 },
+  v: { note: "B", octaveOffset: 1 },
+  
+  // Segunda octava superior (octaveOffset: 2)
+  b: { note: "C", octaveOffset: 2 },
+  n: { note: "D", octaveOffset: 2 },
+  m: { note: "E", octaveOffset: 2 },
+  ",": { note: "F", octaveOffset: 2 },
+  ".": { note: "G", octaveOffset: 2 },
+  "/": { note: "A", octaveOffset: 2 },
 }
 
 // Escalas musicales
@@ -55,7 +66,7 @@ export default function VirtualPiano() {
   const [synth, setSynth] = useState<Tone.PolySynth | null>(null)
   const [pressedKeys, setPressedKeys] = useState<Set<string>>(new Set())
   const [currentOctave, setCurrentOctave] = useState(4)
-  const [numberOfOctaves, setNumberOfOctaves] = useState(1)
+  const numberOfOctaves = 3 // Fijo en 3 octavas
   const [currentScale, setCurrentScale] = useState<Scale>("chromatic")
   const [isRecording, setIsRecording] = useState(false)
   const [recordedNotes, setRecordedNotes] = useState<RecordedNote[]>([])
@@ -512,27 +523,7 @@ export default function VirtualPiano() {
         )}
 
         {/* Controles */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-          <Card>
-            <CardContent className="p-4">
-              <label className="block text-sm font-medium mb-2">Octavas</label>
-              <Select 
-                value={numberOfOctaves.toString()} 
-                onValueChange={(value) => setNumberOfOctaves(Number(value))}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="1">1 Octava</SelectItem>
-                  <SelectItem value="2">2 Octavas</SelectItem>
-                  <SelectItem value="3">3 Octavas</SelectItem>
-                  <SelectItem value="4">4 Octavas</SelectItem>
-                </SelectContent>
-              </Select>
-            </CardContent>
-          </Card>
-
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card>
             <CardContent className="p-4">
               <label className="block text-sm font-medium mb-2">Octava Base</label>
@@ -547,11 +538,9 @@ export default function VirtualPiano() {
                 </Button>
                 <span className="flex-1 text-center py-1 font-mono">
                   {currentOctave}
-                  {numberOfOctaves > 1 && (
-                    <span className="text-xs text-gray-500">
-                      -{currentOctave + numberOfOctaves - 1}
-                    </span>
-                  )}
+                  <span className="text-xs text-gray-500">
+                    -{currentOctave + numberOfOctaves - 1}
+                  </span>
                 </span>
                 <Button
                   variant="outline"
@@ -653,7 +642,7 @@ export default function VirtualPiano() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600">
               <div>
                 <p>
-                  <strong>Teclado físico:</strong> Usa las teclas configuradas (por defecto: A-J primera octava, K-' segunda octava)
+                  <strong>Teclado físico:</strong> Usa las teclas configuradas (A-J primera octava, K-V segunda octava, B-/ tercera octava)
                 </p>
                 <p>
                   <strong>Mouse/Touch:</strong> Haz clic en las teclas del piano
@@ -661,7 +650,7 @@ export default function VirtualPiano() {
               </div>
               <div>
                 <p>
-                  <strong>Octavas:</strong> Configura 1-4 octavas simultáneas
+                  <strong>3 Octavas:</strong> Piano con 3 octavas fijas para mayor rango
                 </p>
                 <p>
                   <strong>Configuración:</strong> Personaliza el mapeo de teclas en el botón "Configurar Teclas"
