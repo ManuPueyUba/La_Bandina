@@ -489,7 +489,7 @@ export default function VirtualPiano() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-                🎹 Piano Virtual Interactivo
+                Piano Virtual Interactivo
               </CardTitle>
               <div className="flex items-center gap-3">
                 <AuthButton />

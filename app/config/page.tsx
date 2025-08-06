@@ -1,11 +1,51 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ArrowLeft, Keyboard, RotateCcw, Save, Check, X } from "lucide-react"
 import Link from "next/link"
+
+// Componente Toast
+interface ToastProps {
+  message: string
+  type: "success" | "error"
+  onClose: () => void
+}
+
+const Toast = ({ message, type, onClose }: ToastProps) => {
+  useEffect(() => {
+    const timer = setTimeout(onClose, 3000) // Auto cerrar después de 3 segundos
+    return () => clearTimeout(timer)
+  }, [onClose])
+
+  return (
+    <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-top-2 duration-300">
+      <div className={`
+        flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg
+        ${type === "success" 
+          ? "bg-green-500 text-white" 
+          : "bg-red-500 text-white"
+        }
+      `}>
+        {type === "success" ? (
+          <Check className="w-5 h-5" />
+        ) : (
+          <X className="w-5 h-5" />
+        )}
+        <span className="font-medium">{message}</span>
+        <button 
+          onClick={onClose}
+          className="ml-2 hover:bg-black/10 rounded p-1"
+        >
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+  )
+}
 
 // Tipos para la configuración de teclas
 interface KeyMapping {
@@ -14,7 +54,7 @@ interface KeyMapping {
 
 // Mapeo por defecto
 const DEFAULT_KEY_MAPPING: KeyMapping = {
-  // Primera octava (octava base)
+  // Octava base (octaveOffset: 0)
   a: { note: "C", octaveOffset: 0 },
   w: { note: "C#", octaveOffset: 0 },
   s: { note: "D", octaveOffset: 0 },
@@ -28,24 +68,37 @@ const DEFAULT_KEY_MAPPING: KeyMapping = {
   u: { note: "A#", octaveOffset: 0 },
   j: { note: "B", octaveOffset: 0 },
   
-  // Segunda octava (octava base + 1)
+  // Primera octava superior (octaveOffset: 1)
   k: { note: "C", octaveOffset: 1 },
   o: { note: "C#", octaveOffset: 1 },
   l: { note: "D", octaveOffset: 1 },
   p: { note: "D#", octaveOffset: 1 },
   ";": { note: "E", octaveOffset: 1 },
-  "'": { note: "F", octaveOffset: 1 },
+  z: { note: "F", octaveOffset: 1 },
+  x: { note: "G", octaveOffset: 1 },
+  c: { note: "A", octaveOffset: 1 },
+  v: { note: "B", octaveOffset: 1 },
+  
+  // Segunda octava superior (octaveOffset: 2)
+  b: { note: "C", octaveOffset: 2 },
+  n: { note: "D", octaveOffset: 2 },
+  m: { note: "E", octaveOffset: 2 },
+  ",": { note: "F", octaveOffset: 2 },
+  ".": { note: "G", octaveOffset: 2 },
+  "/": { note: "A", octaveOffset: 2 },
 }
 
 // Todas las notas cromáticas
 const CHROMATIC_NOTES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
 
 export default function ConfigPage() {
+  const router = useRouter()
   const [keyMapping, setKeyMapping] = useState<KeyMapping>(DEFAULT_KEY_MAPPING)
   const [selectedPianoKey, setSelectedPianoKey] = useState<{note: string, octaveOffset: number} | null>(null)
   const [isListening, setIsListening] = useState(false)
   const [currentOctave, setCurrentOctave] = useState(4)
-  const [numberOfOctaves, setNumberOfOctaves] = useState(2)
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null)
+  const numberOfOctaves = 3 // Fijo en 3 octavas
 
   // Cargar configuración guardada al montar el componente
   useEffect(() => {
@@ -62,7 +115,12 @@ export default function ConfigPage() {
   // Guardar configuración
   const saveConfiguration = () => {
     localStorage.setItem("pianoKeyMapping", JSON.stringify(keyMapping))
-    alert("¡Configuración guardada exitosamente!")
+    setToast({ message: "¡Configuración guardada exitosamente!", type: "success" })
+    
+    // Navegar después de mostrar el toast
+    setTimeout(() => {
+      router.push("/")
+    }, 500) // Dar tiempo para ver el toast
   }
 
   // Resetear a configuración por defecto
@@ -71,6 +129,12 @@ export default function ConfigPage() {
     localStorage.removeItem("pianoKeyMapping")
     setSelectedPianoKey(null)
     setIsListening(false)
+    setToast({ message: "Configuración restablecida por defecto", type: "success" })
+    
+    // Navegar después de mostrar el toast
+    setTimeout(() => {
+      router.push("/")
+    }, 500) // Dar tiempo para ver el toast
   }
 
   // Manejar click en tecla del piano
@@ -301,27 +365,7 @@ export default function ConfigPage() {
         </Card>
 
         {/* Controles principales */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card>
-            <CardContent className="p-4">
-              <label className="block text-sm font-medium mb-2">Octavas a Mostrar</label>
-              <Select 
-                value={numberOfOctaves.toString()} 
-                onValueChange={(value) => setNumberOfOctaves(Number(value))}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="1">1 Octava</SelectItem>
-                  <SelectItem value="2">2 Octavas</SelectItem>
-                  <SelectItem value="3">3 Octavas</SelectItem>
-                  <SelectItem value="4">4 Octavas</SelectItem>
-                </SelectContent>
-              </Select>
-            </CardContent>
-          </Card>
-
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Button onClick={saveConfiguration} className="h-full">
             <Save className="w-4 h-4 mr-2" />
             Guardar Configuración
@@ -396,6 +440,15 @@ export default function ConfigPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Toast */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
     </div>
   )
 }
