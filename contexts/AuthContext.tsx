@@ -1,13 +1,15 @@
 "use client"
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import { loginUser, registerUser, getCurrentUser, validateToken } from '@/lib/api/auth'
 
 // Tipos para el usuario y autenticación
 export interface User {
-  id: string
+  id: number
   email: string
-  name: string
-  createdAt: string
+  username: string
+  full_name: string | null
+  is_active: boolean
 }
 
 export interface AuthContextType {
@@ -34,11 +36,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const token = localStorage.getItem('authToken')
         if (token) {
-          // TODO: Validar token con el backend
-          // Por ahora, simular usuario logueado
-          const savedUser = localStorage.getItem('userData')
-          if (savedUser) {
-            setUser(JSON.parse(savedUser))
+          // Validar token con el backend
+          const isValid = await validateToken(token)
+          if (isValid) {
+            const userData = await getCurrentUser(token)
+            setUser(userData)
+          } else {
+            // Token inválido, limpiar localStorage
+            localStorage.removeItem('authToken')
+            localStorage.removeItem('userData')
           }
         }
       } catch (error) {
@@ -57,25 +63,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (email: string, password: string) => {
     setIsLoading(true)
     try {
-      // TODO: Llamada real al backend
-      // Por ahora, simular login exitoso
-      const mockUser: User = {
-        id: '1',
-        email,
-        name: email.split('@')[0],
-        createdAt: new Date().toISOString()
-      }
-
-      const mockToken = 'mock-jwt-token-' + Date.now()
+      // Llamada real al backend
+      const loginResponse = await loginUser(email, password)
+      const { access_token } = loginResponse
+      
+      // Obtener datos del usuario
+      const userData = await getCurrentUser(access_token)
       
       // Guardar en localStorage
-      localStorage.setItem('authToken', mockToken)
-      localStorage.setItem('userData', JSON.stringify(mockUser))
+      localStorage.setItem('authToken', access_token)
+      localStorage.setItem('userData', JSON.stringify(userData))
       
-      setUser(mockUser)
+      setUser(userData)
     } catch (error) {
       console.error('Login error:', error)
-      throw new Error('Error al iniciar sesión')
+      throw new Error(error instanceof Error ? error.message : 'Error al iniciar sesión')
     } finally {
       setIsLoading(false)
     }
@@ -85,25 +87,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const register = async (email: string, password: string, name: string) => {
     setIsLoading(true)
     try {
-      // TODO: Llamada real al backend
-      // Por ahora, simular registro exitoso
-      const mockUser: User = {
-        id: Date.now().toString(),
-        email,
-        name,
-        createdAt: new Date().toISOString()
-      }
-
-      const mockToken = 'mock-jwt-token-' + Date.now()
+      // Llamada real al backend
+      const userData = await registerUser(email, password, name)
+      
+      // Después del registro exitoso, hacer login automático
+      const loginResponse = await loginUser(email, password)
+      const { access_token } = loginResponse
       
       // Guardar en localStorage
-      localStorage.setItem('authToken', mockToken)
-      localStorage.setItem('userData', JSON.stringify(mockUser))
+      localStorage.setItem('authToken', access_token)
+      localStorage.setItem('userData', JSON.stringify(userData))
       
-      setUser(mockUser)
+      setUser(userData)
     } catch (error) {
       console.error('Register error:', error)
-      throw new Error('Error al registrarse')
+      throw new Error(error instanceof Error ? error.message : 'Error al registrarse')
     } finally {
       setIsLoading(false)
     }

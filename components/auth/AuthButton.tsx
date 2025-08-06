@@ -31,7 +31,7 @@ export function AuthButton() {
           className="flex items-center gap-2"
         >
           <User className="w-4 h-4" />
-          {user?.name || 'Mi Perfil'}
+          {user?.full_name || user?.username || 'Mi Perfil'}
         </Button>
         
         {showOptions && (
