@@ -3,10 +3,23 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { User, LogIn, UserPlus } from "lucide-react"
+import { useAuth } from "@/contexts/AuthContext"
+import { AuthModal } from "./AuthModal"
 
 export function AuthButton() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const { user, isAuthenticated, logout, isLoading } = useAuth()
   const [showOptions, setShowOptions] = useState(false)
+  const [showAuthModal, setShowAuthModal] = useState(false)
+  const [authMode, setAuthMode] = useState<"login" | "register">("login")
+
+  if (isLoading) {
+    return (
+      <Button variant="outline" disabled>
+        <User className="w-4 h-4 animate-spin" />
+        Cargando...
+      </Button>
+    )
+  }
 
   // Si el usuario está autenticado, mostrar perfil
   if (isAuthenticated) {
@@ -18,7 +31,7 @@ export function AuthButton() {
           className="flex items-center gap-2"
         >
           <User className="w-4 h-4" />
-          Mi Perfil
+          {user?.name || 'Mi Perfil'}
         </Button>
         
         {showOptions && (
@@ -32,7 +45,10 @@ export function AuthButton() {
               </button>
               <hr className="my-1" />
               <button 
-                onClick={() => setIsAuthenticated(false)}
+                onClick={() => {
+                  setShowOptions(false)
+                  logout()
+                }}
                 className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
               >
                 Cerrar Sesión
@@ -62,8 +78,8 @@ export function AuthButton() {
             <button 
               onClick={() => {
                 setShowOptions(false)
-                // TODO: Abrir modal de login
-                console.log("Abrir Login")
+                setAuthMode("login")
+                setShowAuthModal(true)
               }}
               className="flex items-center w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
             >
@@ -73,8 +89,8 @@ export function AuthButton() {
             <button 
               onClick={() => {
                 setShowOptions(false)
-                // TODO: Abrir modal de registro
-                console.log("Abrir Registro")
+                setAuthMode("register")
+                setShowAuthModal(true)
               }}
               className="flex items-center w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
             >
@@ -92,6 +108,13 @@ export function AuthButton() {
           onClick={() => setShowOptions(false)}
         />
       )}
+
+      {/* Modal de autenticación */}
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        initialMode={authMode}
+      />
     </div>
   )
 }

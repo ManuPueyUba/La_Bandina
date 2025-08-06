@@ -220,6 +220,21 @@ export default function VirtualPiano() {
   // Manejar eventos del teclado
   useEffect(() => {
     const handleKeyDown = async (event: KeyboardEvent) => {
+      // No capturar teclas si hay un input/textarea enfocado o un modal abierto
+      const activeElement = document.activeElement
+      const isInputFocused = activeElement && (
+        activeElement.tagName === 'INPUT' ||
+        activeElement.tagName === 'TEXTAREA' ||
+        (activeElement as HTMLElement).contentEditable === 'true' ||
+        activeElement.closest('[role="dialog"]') ||
+        activeElement.closest('.modal') ||
+        document.querySelector('[data-modal-open="true"]')
+      )
+      
+      if (isInputFocused) {
+        return // No hacer nada si hay un input enfocado o modal abierto
+      }
+
       const key = event.key.toLowerCase()
       if (keyMapping[key]) {
         const { note, octaveOffset } = keyMapping[key]
@@ -237,6 +252,21 @@ export default function VirtualPiano() {
     }
 
     const handleKeyUp = (event: KeyboardEvent) => {
+      // No capturar teclas si hay un input/textarea enfocado o un modal abierto
+      const activeElement = document.activeElement
+      const isInputFocused = activeElement && (
+        activeElement.tagName === 'INPUT' ||
+        activeElement.tagName === 'TEXTAREA' ||
+        (activeElement as HTMLElement).contentEditable === 'true' ||
+        activeElement.closest('[role="dialog"]') ||
+        activeElement.closest('.modal') ||
+        document.querySelector('[data-modal-open="true"]')
+      )
+      
+      if (isInputFocused) {
+        return // No hacer nada si hay un input enfocado o modal abierto
+      }
+
       const key = event.key.toLowerCase()
       if (keyMapping[key]) {
         const { note, octaveOffset } = keyMapping[key]
