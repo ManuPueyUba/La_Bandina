@@ -5,7 +5,7 @@ import * as Tone from "tone"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Play, Square, RotateCcw, Volume2, Settings } from "lucide-react"
+import { Play, Square, RotateCcw, Volume2, Settings, Music } from "lucide-react"
 import Link from "next/link"
 import { AuthButton } from "@/components/auth/AuthButton"
 
@@ -74,6 +74,8 @@ export default function VirtualPiano() {
   const [volume, setVolume] = useState(-10)
   const [audioInitialized, setAudioInitialized] = useState(false)
   const [keyMapping, setKeyMapping] = useState(DEFAULT_KEY_MAPPING)
+  const [tutorialHighlightedKeys, setTutorialHighlightedKeys] = useState<Set<string>>(new Set())
+  const [tutorialUpcomingNotes, setTutorialUpcomingNotes] = useState<string[]>([])
 
   const recordingStartTime = useRef<number>(0)
   const pressedNotesRef = useRef<Map<string, number>>(new Map())
@@ -89,6 +91,36 @@ export default function VirtualPiano() {
       }
     }
   }, [])
+
+  // Escuchar las teclas resaltadas del tutorial - versión simplificada
+  useEffect(() => {
+    const checkTutorialKeys = () => {
+      if (typeof window !== 'undefined') {
+        const highlightedKeys = (window as any).tutorialHighlightedKeys as Set<string> | undefined;
+        const upcomingNotes = (window as any).tutorialUpcomingNotes as string[] | undefined;
+        
+        if (highlightedKeys instanceof Set) {
+          setTutorialHighlightedKeys(new Set(highlightedKeys));
+        } else {
+          setTutorialHighlightedKeys(new Set());
+        }
+        
+        if (Array.isArray(upcomingNotes)) {
+          setTutorialUpcomingNotes(upcomingNotes);
+        } else {
+          setTutorialUpcomingNotes([]);
+        }
+      }
+    };
+
+    // Verificar inmediatamente
+    checkTutorialKeys();
+    
+    // Verificar periódicamente (cada 500ms para reducir carga)
+    const interval = setInterval(checkTutorialKeys, 500);
+    
+    return () => clearInterval(interval);
+  }, []); // Sin dependencias para evitar re-renders
 
   // Inicializar el sintetizador
   const initAudio = async () => {
@@ -374,7 +406,11 @@ export default function VirtualPiano() {
     isBlack?: boolean 
   }) => {
     const noteKey = `${note}-${octave}`
+    const noteWithOctave = `${note}${octave}`
     const isPressed = pressedKeys.has(noteKey)
+    const isTutorialHighlighted = tutorialHighlightedKeys.has(noteWithOctave)
+    const isTutorialUpcoming = tutorialUpcomingNotes.includes(noteWithOctave)
+    
     const keyboardKey = Object.keys(keyMapping).find((k) => {
       const mapping = keyMapping[k]
       return mapping.note === note && (currentOctave + mapping.octaveOffset) === octave
@@ -386,12 +422,25 @@ export default function VirtualPiano() {
           relative select-none transition-all duration-75
           ${
             isBlack
-              ? `w-8 h-32 bg-gray-900 hover:bg-gray-800 -mx-4 z-10 rounded-b-md
-               ${isPressed ? "bg-gray-700 transform translate-y-1" : ""}`
-              : `w-12 h-48 bg-white hover:bg-gray-50 border border-gray-300 rounded-b-md
+              ? `w-8 h-32 hover:bg-gray-800 -mx-4 z-10 rounded-b-md
+               ${isTutorialHighlighted 
+                  ? "bg-blue-600 hover:bg-blue-700" 
+                  : isTutorialUpcoming
+                    ? "bg-blue-400 hover:bg-blue-500"
+                    : "bg-gray-900"
+                }
+               ${isPressed ? "transform translate-y-1" : ""}`
+              : `w-12 h-48 hover:bg-gray-50 border border-gray-300 rounded-b-md
+               ${isTutorialHighlighted 
+                  ? "bg-blue-100 border-blue-300 hover:bg-blue-200" 
+                  : isTutorialUpcoming
+                    ? "bg-blue-50 border-blue-200 hover:bg-blue-100"
+                    : "bg-white"
+                }
                ${isPressed ? "bg-gray-200 transform translate-y-1" : ""}`
           }
           ${isPressed ? "shadow-inner" : "shadow-md"}
+          ${isTutorialHighlighted ? "ring-2 ring-blue-400 ring-opacity-75" : ""}
         `}
         onMouseDown={async () => {
           if (!audioInitialized) {
@@ -415,9 +464,13 @@ export default function VirtualPiano() {
       >
         {/* Mostrar información en teclas blancas */}
         {!isBlack && (
-          <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 text-xs text-gray-500">
+          <div className={`absolute bottom-2 left-1/2 transform -translate-x-1/2 text-xs ${
+            isTutorialHighlighted || isTutorialUpcoming ? 'text-blue-700' : 'text-gray-500'
+          }`}>
             <div>{keyboardKey?.toUpperCase()}</div>
-            <div className="text-[10px] text-gray-400">{note}{octave}</div>
+            <div className={`text-[10px] ${
+              isTutorialHighlighted || isTutorialUpcoming ? 'text-blue-600' : 'text-gray-400'
+            }`}>{note}{octave}</div>
           </div>
         )}
         
@@ -493,6 +546,12 @@ export default function VirtualPiano() {
               </CardTitle>
               <div className="flex items-center gap-3">
                 <AuthButton />
+                <Link href="/songs">
+                  <Button variant="outline">
+                    <Music className="w-4 h-4 mr-2" />
+                    Canciones
+                  </Button>
+                </Link>
                 <Link href="/config">
                   <Button variant="outline">
                     <Settings className="w-4 h-4 mr-2" />
@@ -647,6 +706,9 @@ export default function VirtualPiano() {
                 <p>
                   <strong>Mouse/Touch:</strong> Haz clic en las teclas del piano
                 </p>
+                <p>
+                  <strong>Canciones:</strong> Ve al botón "Canciones" para tutoriales interactivos
+                </p>
               </div>
               <div>
                 <p>
@@ -654,6 +716,9 @@ export default function VirtualPiano() {
                 </p>
                 <p>
                   <strong>Configuración:</strong> Personaliza el mapeo de teclas en el botón "Configurar Teclas"
+                </p>
+                <p>
+                  <strong>Tutoriales:</strong> Las teclas azules muestran qué notas tocar en las canciones
                 </p>
               </div>
             </div>
