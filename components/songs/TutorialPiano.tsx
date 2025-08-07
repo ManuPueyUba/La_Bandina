@@ -135,14 +135,20 @@ export default function TutorialPiano({ highlightedKeys, onKeyPress, onKeyReleas
   const releaseNote = useCallback((noteWithOctave: string) => {
     if (!synth) return;
 
-    console.log('Releasing note:', noteWithOctave);
+    console.log('TutorialPiano - Releasing note:', noteWithOctave);
     synth.triggerRelease(noteWithOctave);
     setPressedKeys(prev => {
       const newSet = new Set(prev);
       newSet.delete(noteWithOctave);
       return newSet;
     });
-  }, [synth]);
+    
+    // Notificar al componente padre si hay callback
+    if (onKeyRelease) {
+      console.log('TutorialPiano - Calling onKeyRelease with:', noteWithOctave);
+      onKeyRelease(noteWithOctave);
+    }
+  }, [synth, onKeyRelease]);
 
   // Manejo de eventos de teclado (mismo sistema que la página principal)
   useEffect(() => {
@@ -261,15 +267,9 @@ export default function TutorialPiano({ highlightedKeys, onKeyPress, onKeyReleas
         }}
         onMouseUp={() => {
           releaseNote(noteWithOctave);
-          if (onKeyRelease) {
-            onKeyRelease(noteWithOctave);
-          }
         }}
         onMouseLeave={() => {
           releaseNote(noteWithOctave);
-          if (onKeyRelease) {
-            onKeyRelease(noteWithOctave);
-          }
         }}
         onTouchStart={async (e) => {
           e.preventDefault();

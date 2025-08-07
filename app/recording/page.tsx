@@ -115,16 +115,27 @@ export default function RecordingPage() {
     handleBackToLibrary();
   }, [handleBackToLibrary]);
 
-  // Manejar teclas del piano
+  // Manejar teclas del piano con conexión a grabación
+  const [recordingHandlers, setRecordingHandlers] = useState<{
+    onKeyPress: (key: string) => void;
+    onKeyRelease: (key: string) => void;
+  } | null>(null);
+
   const handleKeyPress = useCallback((key: string) => {
+    console.log('RecordingPage - Key press:', key, 'View mode:', viewMode); // Debug
     if (viewMode === 'practicing') {
       tutorialKeyPress(key);
+    } else if (viewMode === 'recording' && recordingHandlers) {
+      recordingHandlers.onKeyPress(key);
     }
-  }, [viewMode, tutorialKeyPress]);
+  }, [viewMode, tutorialKeyPress, recordingHandlers]);
 
   const handleKeyRelease = useCallback((key: string) => {
-    // Para la grabación, el release se maneja en RecordingControls
-  }, []);
+    console.log('RecordingPage - Key release:', key, 'View mode:', viewMode); // Debug
+    if (viewMode === 'recording' && recordingHandlers) {
+      recordingHandlers.onKeyRelease(key);
+    }
+  }, [viewMode, recordingHandlers]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -184,8 +195,7 @@ export default function RecordingPage() {
             <>
               <RecordingControls
                 onRecordingSaved={handleRecordingSaved}
-                onKeyPress={handleKeyPress}
-                onKeyRelease={handleKeyRelease}
+                onSetRecordingHandlers={setRecordingHandlers}
               />
               
               <TutorialPiano
@@ -238,6 +248,7 @@ export default function RecordingPage() {
               <TutorialPiano
                 highlightedKeys={highlightedKeys}
                 onKeyPress={handleKeyPress}
+                onKeyRelease={handleKeyRelease}
               />
 
               <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">

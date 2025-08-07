@@ -4,7 +4,7 @@ import React, { useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useRecording } from '@/hooks/useRecording';
-import { Recording } from '@/types/song';
+import { Recording, Note } from '@/types/song';
 import { downloadMidiFile } from '@/lib/midi-export';
 import { 
   Mic, 
@@ -20,19 +20,23 @@ import {
 
 interface RecordingControlsProps {
   onRecordingSaved: (recording: Recording) => void;
-  onKeyPress: (key: string) => void;
-  onKeyRelease: (key: string) => void;
+  onSetRecordingHandlers: (handlers: { onKeyPress: (key: string) => void; onKeyRelease: (key: string) => void; }) => void;
 }
 
 export default function RecordingControls({ 
   onRecordingSaved, 
-  onKeyPress, 
-  onKeyRelease 
+  onSetRecordingHandlers
 }: RecordingControlsProps) {
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [title, setTitle] = useState('');
   const [artist, setArtist] = useState('Usuario');
   const [description, setDescription] = useState('');
+  
+  // Estado para mostrar información de la grabación detenida
+  const [stoppedRecordingInfo, setStoppedRecordingInfo] = useState<{
+    notes: Note[];
+    duration: number;
+  } | null>(null);
 
   const {
     recordingState,
@@ -47,16 +51,13 @@ export default function RecordingControls({
     getActiveKeys
   } = useRecording();
 
-  // Propagar eventos de teclas al hook de grabación
-  const handleKeyPressWithRecording = useCallback((key: string) => {
-    handleKeyPress(key);
-    onKeyPress(key);
-  }, [handleKeyPress, onKeyPress]);
-  
-  const handleKeyReleaseWithRecording = useCallback((key: string) => {
-    handleKeyRelease(key);
-    onKeyRelease(key);
-  }, [handleKeyRelease, onKeyRelease]);
+  // Proporcionar handlers al componente padre
+  React.useEffect(() => {
+    onSetRecordingHandlers({
+      onKeyPress: handleKeyPress,
+      onKeyRelease: handleKeyRelease
+    });
+  }, [handleKeyPress, handleKeyRelease, onSetRecordingHandlers]);
 
   const formatDuration = (ms: number) => {
     const seconds = Math.floor(ms / 1000);
@@ -75,9 +76,30 @@ export default function RecordingControls({
   };
 
   const handleStopRecording = () => {
+    console.log('RecordingControls - Deteniendo grabación...');
+    
+    // Guardar información ANTES de detener (para mostrar en el modal)
+    const currentDuration = recordingState.duration;
+    
     const notes = stopRecording();
+    console.log('Notas grabadas al detener:', notes.length); // Debug
+    console.log('Notas completas:', notes); // Debug detallado
+    
     if (notes.length > 0) {
+      // Guardar información para mostrar en el modal
+      setStoppedRecordingInfo({
+        notes,
+        duration: currentDuration
+      });
       setShowSaveDialog(true);
+    } else {
+      // Mostrar mensaje cuando no hay notas
+      alert(`❌ No se grabaron notas válidas.
+
+🔍 Abre la consola (F12) para ver logs de debug.
+
+🎹 Usa estas teclas: a, s, d, f, g, h, j
+🎵 Mantén las teclas presionadas al menos medio segundo.`);
     }
   };
 
@@ -87,10 +109,28 @@ export default function RecordingControls({
       return;
     }
 
+    if (!stoppedRecordingInfo) {
+      alert('No hay grabación para guardar');
+      return;
+    }
+
     try {
-      const recording = saveRecording(title.trim(), artist.trim(), description.trim());
+      // Crear grabación manualmente con las notas guardadas
+      const recording: Recording = {
+        id: `recording-${Date.now()}`,
+        title: title.trim(),
+        artist: artist.trim() || 'Usuario',
+        createdAt: new Date(),
+        duration: stoppedRecordingInfo.duration,
+        notes: stoppedRecordingInfo.notes,
+        bpm: 120, // BPM por defecto
+        keySignature: 'C major',
+        description: description.trim() || `Grabación personal de ${stoppedRecordingInfo.notes.length} notas`
+      };
+
       onRecordingSaved(recording);
       setShowSaveDialog(false);
+      setStoppedRecordingInfo(null);
       setTitle('');
       setArtist('Usuario');
       setDescription('');
@@ -105,14 +145,32 @@ export default function RecordingControls({
       return;
     }
 
+    if (!stoppedRecordingInfo) {
+      alert('No hay grabación para guardar');
+      return;
+    }
+
     try {
-      const recording = saveRecording(title.trim(), artist.trim(), description.trim());
+      // Crear grabación manualmente con las notas guardadas
+      const recording: Recording = {
+        id: `recording-${Date.now()}`,
+        title: title.trim(),
+        artist: artist.trim() || 'Usuario',
+        createdAt: new Date(),
+        duration: stoppedRecordingInfo.duration,
+        notes: stoppedRecordingInfo.notes,
+        bpm: 120, // BPM por defecto
+        keySignature: 'C major',
+        description: description.trim() || `Grabación personal de ${stoppedRecordingInfo.notes.length} notas`
+      };
+
       onRecordingSaved(recording);
       
       // Descargar como MIDI
       downloadMidiFile(recording);
       
       setShowSaveDialog(false);
+      setStoppedRecordingInfo(null);
       setTitle('');
       setArtist('Usuario');
       setDescription('');
@@ -124,6 +182,7 @@ export default function RecordingControls({
   const handleDiscardRecording = () => {
     clearRecording();
     setShowSaveDialog(false);
+    setStoppedRecordingInfo(null);
     setTitle('');
     setArtist('Usuario');
     setDescription('');
@@ -269,8 +328,8 @@ export default function RecordingControls({
                 </div>
 
                 <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded">
-                  <p><strong>Duración:</strong> {formatDuration(recordingState.duration)}</p>
-                  <p><strong>Notas:</strong> {recordingState.currentNotes.length}</p>
+                  <p><strong>Duración:</strong> {stoppedRecordingInfo ? formatDuration(stoppedRecordingInfo.duration) : '0:00.00'}</p>
+                  <p><strong>Notas:</strong> {stoppedRecordingInfo ? stoppedRecordingInfo.notes.length : 0}</p>
                 </div>
 
                 <div className="text-sm text-blue-600 bg-blue-50 p-3 rounded border border-blue-200">
@@ -285,20 +344,45 @@ export default function RecordingControls({
                 </div>
               </div>
 
-              <div className="flex justify-end gap-3 mt-6">
-                <Button onClick={handleDiscardRecording} variant="outline" className="flex items-center gap-2">
-                  <Trash2 className="w-4 h-4" />
-                  Descartar
-                </Button>
-                <Button onClick={handleSaveRecording} variant="outline" className="flex items-center gap-2">
-                  <Save className="w-4 h-4" />
-                  Solo Guardar
-                </Button>
-                <Button onClick={handleSaveAndDownload} className="flex items-center gap-2">
-                  <Download className="w-4 h-4" />
-                  Guardar y Descargar MIDI
-                </Button>
-              </div>
+          <div className="flex justify-end gap-3 mt-6">
+            {/* Botón de debug en desarrollo */}
+            {process.env.NODE_ENV === 'development' && (
+              <Button 
+                onClick={() => {
+                  console.log('🔍 Debug - Estado actual de grabación:', recordingState);
+                  console.log('🔍 Debug - Información de grabación detenida:', stoppedRecordingInfo);
+                  console.log('🔍 Debug - Notas activas:', getActiveKeys());
+                  alert(`Debug Info:
+• isRecording: ${recordingState.isRecording}
+• isPaused: ${recordingState.isPaused} 
+• currentNotes (estado actual): ${recordingState.currentNotes.length}
+• stoppedRecording notas: ${stoppedRecordingInfo?.notes.length || 'N/A'}
+• stoppedRecording duración: ${stoppedRecordingInfo?.duration || 'N/A'}
+• activeKeys: ${getActiveKeys().join(', ') || 'ninguna'}
+• startTime: ${recordingState.startTime ? new Date(recordingState.startTime).toLocaleTimeString() : 'null'}
+
+Revisa la consola para más detalles.`);
+                }}
+                variant="outline" 
+                size="sm"
+                className="text-xs"
+              >
+                🔍 Debug
+              </Button>
+            )}
+            <Button onClick={handleDiscardRecording} variant="outline" className="flex items-center gap-2">
+              <Trash2 className="w-4 h-4" />
+              Descartar
+            </Button>
+            <Button onClick={handleSaveRecording} variant="outline" className="flex items-center gap-2">
+              <Save className="w-4 h-4" />
+              Solo Guardar
+            </Button>
+            <Button onClick={handleSaveAndDownload} className="flex items-center gap-2">
+              <Download className="w-4 h-4" />
+              Guardar y Descargar MIDI
+            </Button>
+          </div>
             </div>
           </Card>
         </div>

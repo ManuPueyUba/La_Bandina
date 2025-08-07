@@ -43,6 +43,7 @@ export function useRecording() {
 
   const startRecording = useCallback(() => {
     const now = Date.now();
+    console.log('useRecording - Iniciando grabación a las:', now);
     setRecordingState({
       isRecording: true,
       isPaused: false,
@@ -91,20 +92,50 @@ export function useRecording() {
   }, []);
 
   const stopRecording = useCallback((): Note[] => {
+    console.log('useRecording - Deteniendo grabación');
+    console.log('useRecording - Estado actual:', {
+      isRecording: recordingState.isRecording,
+      startTime: recordingState.startTime,
+      currentNotesCount: recordingState.currentNotes.length,
+      activeNotesCount: activeNotesRef.current.size
+    });
+    
     const currentTime = Date.now();
     const finalNotes: Note[] = [...recordingState.currentNotes];
     
+    // Verificar que tenemos un startTime válido
+    if (!recordingState.startTime) {
+      console.warn('useRecording - No hay startTime válido, retornando notas actuales solamente');
+      setRecordingState({
+        isRecording: false,
+        isPaused: false,
+        startTime: null,
+        currentNotes: [],
+        duration: 0
+      });
+      activeNotesRef.current.clear();
+      return finalNotes;
+    }
+    
     // Finalizar todas las notas activas
+    console.log('useRecording - Finalizando', activeNotesRef.current.size, 'notas activas');
     activeNotesRef.current.forEach((activeNote, key) => {
       const duration = currentTime - activeNote.startTime;
+      console.log('useRecording - Finalizando nota:', key, 'duración:', duration, 'ms');
       if (duration > 50) { // Mínimo 50ms
-        finalNotes.push({
+        const note: Note = {
           key,
           startTime: activeNote.startTime - recordingState.startTime!,
           duration
-        });
+        };
+        finalNotes.push(note);
+        console.log('useRecording - Nota añadida a finalNotes:', note);
+      } else {
+        console.log('useRecording - Nota muy corta, no añadida:', duration, 'ms');
       }
     });
+
+    console.log('useRecording - Total de notas finales:', finalNotes.length);
 
     setRecordingState({
       isRecording: false,
@@ -117,10 +148,13 @@ export function useRecording() {
     activeNotesRef.current.clear();
     
     // Ordenar notas por tiempo de inicio
-    return finalNotes.sort((a, b) => a.startTime - b.startTime);
-  }, [recordingState.currentNotes, recordingState.startTime]);
+    const sortedNotes = finalNotes.sort((a, b) => a.startTime - b.startTime);
+    console.log('useRecording - Notas ordenadas:', sortedNotes);
+    return sortedNotes;
+  }, [recordingState.currentNotes, recordingState.startTime, recordingState.isRecording]);
 
   const handleKeyPress = useCallback((key: string) => {
+    console.log('useRecording - Key press:', key, 'isRecording:', recordingState.isRecording, 'isPaused:', recordingState.isPaused);
     if (!recordingState.isRecording || recordingState.isPaused || !recordingState.startTime) {
       return;
     }
@@ -137,15 +171,18 @@ export function useRecording() {
       key,
       startTime: currentTime
     });
+    console.log('useRecording - Nota iniciada:', key, 'Notas activas:', activeNotesRef.current.size);
   }, [recordingState.isRecording, recordingState.isPaused, recordingState.startTime]);
 
   const handleKeyRelease = useCallback((key: string) => {
+    console.log('useRecording - Key release:', key, 'isRecording:', recordingState.isRecording);
     if (!recordingState.isRecording || !recordingState.startTime) {
       return;
     }
 
     const activeNote = activeNotesRef.current.get(key);
     if (!activeNote) {
+      console.log('useRecording - No hay nota activa para:', key);
       return;
     }
 
@@ -160,10 +197,13 @@ export function useRecording() {
         duration
       };
 
+      console.log('useRecording - Nota grabada:', note);
       setRecordingState(prev => ({
         ...prev,
         currentNotes: [...prev.currentNotes, note]
       }));
+    } else {
+      console.log('useRecording - Nota muy corta, no grabada:', duration, 'ms');
     }
 
     activeNotesRef.current.delete(key);
