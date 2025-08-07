@@ -13,12 +13,6 @@ import { AuthButton } from "@/components/auth/AuthButton"
 type Note = string
 type Scale = "major" | "minor" | "chromatic"
 
-interface RecordedNote {
-  note: string
-  time: number
-  duration: number
-}
-
 // Mapeo por defecto de teclas del teclado físico a notas
 const DEFAULT_KEY_MAPPING: { [key: string]: { note: string; octaveOffset: number } } = {
   // Octava base (octaveOffset: 0)
@@ -68,16 +62,13 @@ export default function VirtualPiano() {
   const [currentOctave, setCurrentOctave] = useState(4)
   const numberOfOctaves = 3 // Fijo en 3 octavas
   const [currentScale, setCurrentScale] = useState<Scale>("chromatic")
-  const [isRecording, setIsRecording] = useState(false)
-  const [recordedNotes, setRecordedNotes] = useState<RecordedNote[]>([])
-  const [isPlaying, setIsPlaying] = useState(false)
   const [volume, setVolume] = useState(-10)
   const [audioInitialized, setAudioInitialized] = useState(false)
   const [keyMapping, setKeyMapping] = useState(DEFAULT_KEY_MAPPING)
   const [tutorialHighlightedKeys, setTutorialHighlightedKeys] = useState<Set<string>>(new Set())
   const [tutorialUpcomingNotes, setTutorialUpcomingNotes] = useState<string[]>([])
+  const [showControls, setShowControls] = useState(false)
 
-  const recordingStartTime = useRef<number>(0)
   const pressedNotesRef = useRef<Map<string, number>>(new Map())
 
   // Cargar configuración de teclas desde localStorage
@@ -197,14 +188,8 @@ export default function VirtualPiano() {
 
       const noteKey = `${note}-${octave}`
       setPressedKeys((prev) => new Set([...prev, noteKey]))
-
-      // Grabación
-      if (isRecording) {
-        const currentTime = Tone.now() * 1000 - recordingStartTime.current
-        pressedNotesRef.current.set(noteKey, currentTime)
-      }
     },
-    [synth, isRecording],
+    [synth],
   )
 
   // Tocar una nota (mantener compatibilidad con octava actual)
@@ -230,26 +215,8 @@ export default function VirtualPiano() {
         newSet.delete(noteKey)
         return newSet
       })
-
-      // Grabación - calcular duración
-      if (isRecording && pressedNotesRef.current.has(noteKey)) {
-        const startTime = pressedNotesRef.current.get(noteKey)!
-        const currentTime = Tone.now() * 1000 - recordingStartTime.current
-        const duration = currentTime - startTime
-
-        setRecordedNotes((prev) => [
-          ...prev,
-          {
-            note: noteWithOctave,
-            time: startTime,
-            duration: duration,
-          },
-        ])
-
-        pressedNotesRef.current.delete(noteKey)
-      }
     },
-    [synth, isRecording],
+    [synth],
   )
 
   // Soltar una nota (mantener compatibilidad con octava actual)
@@ -328,72 +295,7 @@ export default function VirtualPiano() {
     }
   }, [playNoteWithOctave, releaseNoteWithOctave, pressedKeys, currentOctave, audioInitialized, initAudio, keyMapping])
 
-  // Iniciar grabación
-  const startRecording = () => {
-    setRecordedNotes([])
-    setIsRecording(true)
-    recordingStartTime.current = Tone.now() * 1000
-    pressedNotesRef.current.clear()
-  }
 
-  // Detener grabación
-  const stopRecording = () => {
-    setIsRecording(false)
-    // Finalizar notas que aún están presionadas
-    pressedNotesRef.current.forEach((startTime, note) => {
-      const currentTime = Tone.now() * 1000 - recordingStartTime.current
-      const duration = currentTime - startTime
-      setRecordedNotes((prev) => [
-        ...prev,
-        {
-          note: getNoteWithOctave(note),
-          time: startTime,
-          duration: duration,
-        },
-      ])
-    })
-    pressedNotesRef.current.clear()
-  }
-
-  // Reproducir grabación
-  const playRecording = async () => {
-    if (!synth || recordedNotes.length === 0) return
-
-    setIsPlaying(true)
-
-    // Ordenar notas por tiempo
-    const sortedNotes = [...recordedNotes].sort((a, b) => a.time - b.time)
-
-    sortedNotes.forEach(({ note, time, duration }) => {
-      Tone.Transport.schedule(
-        () => {
-          synth.triggerAttackRelease(note, duration / 1000)
-        },
-        `+${time / 1000}`,
-      )
-    })
-
-    Tone.Transport.start()
-
-    // Detener después de la última nota
-    const lastNote = sortedNotes[sortedNotes.length - 1]
-    const totalDuration = lastNote.time + lastNote.duration
-
-    setTimeout(() => {
-      Tone.Transport.stop()
-      Tone.Transport.cancel()
-      setIsPlaying(false)
-    }, totalDuration + 1000)
-  }
-
-  // Limpiar grabación
-  const clearRecording = () => {
-    setRecordedNotes([])
-    setIsRecording(false)
-    setIsPlaying(false)
-    Tone.Transport.stop()
-    Tone.Transport.cancel()
-  }
 
   // Componente de tecla individual
   const PianoKey = ({ 
@@ -419,28 +321,27 @@ export default function VirtualPiano() {
     return (
       <button
         className={`
-          relative select-none transition-all duration-75
+          relative select-none transition-all duration-100
           ${
             isBlack
-              ? `w-8 h-32 hover:bg-gray-800 -mx-4 z-10 rounded-b-md
+              ? `w-8 h-32 -mx-4 z-10 rounded-b-md border-b-2 border-gray-800
                ${isTutorialHighlighted 
-                  ? "bg-blue-600 hover:bg-blue-700" 
+                  ? "bg-blue-500 hover:bg-blue-600 shadow-lg" 
                   : isTutorialUpcoming
                     ? "bg-blue-400 hover:bg-blue-500"
-                    : "bg-gray-900"
+                    : "bg-gray-900 hover:bg-gray-800"
                 }
-               ${isPressed ? "transform translate-y-1" : ""}`
-              : `w-12 h-48 hover:bg-gray-50 border border-gray-300 rounded-b-md
+               ${isPressed ? "transform translate-y-1 shadow-inner" : "shadow-md"}`
+              : `w-12 h-48 border border-gray-300 rounded-b-md
                ${isTutorialHighlighted 
                   ? "bg-blue-100 border-blue-300 hover:bg-blue-200" 
                   : isTutorialUpcoming
                     ? "bg-blue-50 border-blue-200 hover:bg-blue-100"
-                    : "bg-white"
+                    : "bg-white hover:bg-gray-50"
                 }
-               ${isPressed ? "bg-gray-200 transform translate-y-1" : ""}`
+               ${isPressed ? "bg-gray-100 transform translate-y-1 shadow-inner" : "shadow-sm"}`
           }
-          ${isPressed ? "shadow-inner" : "shadow-md"}
-          ${isTutorialHighlighted ? "ring-2 ring-blue-400 ring-opacity-75" : ""}
+          ${isTutorialHighlighted ? "ring-2 ring-blue-400" : ""}
         `}
         onMouseDown={async () => {
           if (!audioInitialized) {
@@ -464,11 +365,11 @@ export default function VirtualPiano() {
       >
         {/* Mostrar información en teclas blancas */}
         {!isBlack && (
-          <div className={`absolute bottom-2 left-1/2 transform -translate-x-1/2 text-xs ${
+          <div className={`absolute bottom-3 left-1/2 transform -translate-x-1/2 text-center ${
             isTutorialHighlighted || isTutorialUpcoming ? 'text-blue-700' : 'text-gray-500'
           }`}>
-            <div>{keyboardKey?.toUpperCase()}</div>
-            <div className={`text-[10px] ${
+            <div className="text-xs font-medium">{keyboardKey?.toUpperCase()}</div>
+            <div className={`text-[10px] font-mono ${
               isTutorialHighlighted || isTutorialUpcoming ? 'text-blue-600' : 'text-gray-400'
             }`}>{note}{octave}</div>
           </div>
@@ -476,9 +377,9 @@ export default function VirtualPiano() {
         
         {/* Mostrar información en teclas negras */}
         {isBlack && keyboardKey && (
-          <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 text-xs text-white">
-            <div className="font-semibold">{keyboardKey.toUpperCase()}</div>
-            <div className="text-[10px] text-gray-300">{note}{octave}</div>
+          <div className="absolute bottom-3 left-1/2 transform -translate-x-1/2 text-center text-white">
+            <div className="text-xs font-medium">{keyboardKey.toUpperCase()}</div>
+            <div className="text-[10px] font-mono text-gray-300">{note}{octave}</div>
           </div>
         )}
       </button>
@@ -535,223 +436,135 @@ export default function VirtualPiano() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 p-4">
-      <div className="max-w-6xl mx-auto space-y-6">
-        {/* Header */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-                Piano Virtual Interactivo
-              </CardTitle>
-              <div className="flex items-center gap-3">
-                <AuthButton />
-                <Link href="/songs">
-                  <Button variant="outline">
-                    <Music className="w-4 h-4 mr-2" />
-                    Canciones
-                  </Button>
-                </Link>
-                <Link href="/recording">
-                  <Button variant="outline">
-                    <Mic className="w-4 h-4 mr-2" />
-                    Grabar
-                  </Button>
-                </Link>
-                <Link href="/config">
-                  <Button variant="outline">
-                    <Settings className="w-4 h-4 mr-2" />
-                    Configurar Teclas
-                  </Button>
-                </Link>
+    <div className="min-h-screen bg-black text-white">
+      {/* Header minimalista */}
+      <div className="border-b border-gray-800 bg-gray-900">
+        <div className="max-w-6xl mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            <h1 className="text-2xl font-light text-white">Piano</h1>
+            
+            {/* Botón de menú (hamburguer) */}
+            <button
+              onClick={() => setShowControls(!showControls)}
+              className="p-2 rounded hover:bg-gray-800 transition-colors"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-6xl mx-auto px-6 py-8">
+        {/* Menú desplegable oculto */}
+        {showControls && (
+          <div className="mb-8 bg-gray-900 border border-gray-700 rounded-lg p-6 space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              {/* Navegación */}
+              <div className="space-y-3">
+                <h3 className="text-sm font-medium text-gray-300 uppercase tracking-wider">Navegación</h3>
+                <div className="space-y-2">
+                  <Link href="/songs">
+                    <button className="w-full text-left p-2 rounded hover:bg-gray-800 transition-colors text-gray-300 hover:text-white">
+                      Canciones
+                    </button>
+                  </Link>
+                  <Link href="/config">
+                    <button className="w-full text-left p-2 rounded hover:bg-gray-800 transition-colors text-gray-300 hover:text-white">
+                      Configurar Teclas
+                    </button>
+                  </Link>
+                </div>
+              </div>
+
+              {/* Octava */}
+              <div className="space-y-3">
+                <h3 className="text-sm font-medium text-gray-300 uppercase tracking-wider">Octava</h3>
+                <div className="flex items-center space-x-3">
+                  <button
+                    onClick={() => setCurrentOctave(Math.max(1, currentOctave - 1))}
+                    disabled={currentOctave <= 1}
+                    className="w-8 h-8 rounded bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    -
+                  </button>
+                  <span className="font-mono text-lg text-white min-w-[3rem] text-center">
+                    {currentOctave}
+                  </span>
+                  <button
+                    onClick={() => setCurrentOctave(Math.min(8 - numberOfOctaves, currentOctave + 1))}
+                    disabled={currentOctave + numberOfOctaves > 7}
+                    className="w-8 h-8 rounded bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+
+              {/* Escala */}
+              <div className="space-y-3">
+                <h3 className="text-sm font-medium text-gray-300 uppercase tracking-wider">Escala</h3>
+                <Select value={currentScale} onValueChange={(value: Scale) => setCurrentScale(value)}>
+                  <SelectTrigger className="bg-gray-700 border-gray-600 text-white">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-gray-800 border-gray-600">
+                    <SelectItem value="chromatic">Cromática</SelectItem>
+                    <SelectItem value="major">Mayor</SelectItem>
+                    <SelectItem value="minor">Menor</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Volumen */}
+              <div className="space-y-3">
+                <h3 className="text-sm font-medium text-gray-300 uppercase tracking-wider">Volumen</h3>
+                <div className="space-y-2">
+                  <input
+                    type="range"
+                    min="-30"
+                    max="0"
+                    value={volume}
+                    onChange={(e) => setVolume(Number(e.target.value))}
+                    className="w-full h-2 bg-gray-700 rounded-lg appearance-none slider"
+                  />
+                  <div className="text-xs text-gray-400 text-center">{volume}dB</div>
+                </div>
               </div>
             </div>
-          </CardHeader>
-        </Card>
+          </div>
+        )}
 
         {/* Inicialización de Audio */}
         {!audioInitialized && (
-          <Card>
-            <CardContent className="p-6 text-center">
-              <p className="mb-4 text-gray-600">
-                Para comenzar a usar el piano, necesitas inicializar el audio.
-              </p>
-              <Button 
-                onClick={initAudio}
-                size="lg"
-                className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
-              >
-                🎵 Inicializar Audio
-              </Button>
-            </CardContent>
-          </Card>
+          <div className="mb-8 bg-gray-900 border border-gray-700 rounded-lg p-8 text-center">
+            <p className="mb-4 text-gray-300">
+              Presiona para inicializar el audio del piano
+            </p>
+            <button 
+              onClick={initAudio}
+              className="px-6 py-3 bg-white text-black rounded hover:bg-gray-200 transition-colors font-medium"
+            >
+              Inicializar Piano
+            </button>
+          </div>
         )}
-
-        {/* Controles */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="p-4">
-              <label className="block text-sm font-medium mb-2">Octava Base</label>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentOctave(Math.max(1, currentOctave - 1))}
-                  disabled={currentOctave <= 1}
-                >
-                  -
-                </Button>
-                <span className="flex-1 text-center py-1 font-mono">
-                  {currentOctave}
-                  <span className="text-xs text-gray-500">
-                    -{currentOctave + numberOfOctaves - 1}
-                  </span>
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentOctave(Math.min(8 - numberOfOctaves, currentOctave + 1))}
-                  disabled={currentOctave + numberOfOctaves > 7}
-                >
-                  +
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-4">
-              <label className="block text-sm font-medium mb-2">Escala</label>
-              <Select value={currentScale} onValueChange={(value: Scale) => setCurrentScale(value)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="chromatic">Cromática</SelectItem>
-                  <SelectItem value="major">Mayor</SelectItem>
-                  <SelectItem value="minor">Menor</SelectItem>
-                </SelectContent>
-              </Select>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-4">
-              <label className="block text-sm font-medium mb-2">
-                <Volume2 className="inline w-4 h-4 mr-1" />
-                Volumen
-              </label>
-              <input
-                type="range"
-                min="-30"
-                max="0"
-                value={volume}
-                onChange={(e) => setVolume(Number(e.target.value))}
-                className="w-full"
-              />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-4">
-              <label className="block text-sm font-medium mb-2">Grabación</label>
-              <div className="flex gap-2">
-                {!isRecording ? (
-                  <Button size="sm" onClick={startRecording} className="flex-1">
-                    <div className="w-2 h-2 bg-red-500 rounded-full mr-2"></div>
-                    Grabar
-                  </Button>
-                ) : (
-                  <Button size="sm" onClick={stopRecording} variant="destructive" className="flex-1">
-                    <Square className="w-3 h-3 mr-1" />
-                    Parar
-                  </Button>
-                )}
-              </div>
-              {recordedNotes.length > 0 && (
-                <div className="flex gap-1 mt-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={playRecording}
-                    disabled={isPlaying}
-                    className="flex-1 bg-transparent"
-                  >
-                    <Play className="w-3 h-3 mr-1" />
-                    {isPlaying ? "Reproduciendo..." : "Reproducir"}
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={clearRecording}>
-                    <RotateCcw className="w-3 h-3" />
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
 
         {/* Piano */}
-        <Card>
-          <CardContent className="p-8">
-            <div className="flex justify-center">
-              <div className="max-w-full overflow-x-auto">
-                {renderKeyboard()}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="bg-gray-900 border border-gray-700 rounded-lg p-8">
+          <div className="flex justify-center overflow-x-auto">
+            {renderKeyboard()}
+          </div>
+        </div>
 
-        {/* Instrucciones */}
-        <Card>
-          <CardContent className="p-4">
-            <h3 className="font-semibold mb-2">🎵 Instrucciones:</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600">
-              <div>
-                <p>
-                  <strong>Teclado físico:</strong> Usa las teclas configuradas (A-J primera octava, K-V segunda octava, B-/ tercera octava)
-                </p>
-                <p>
-                  <strong>Mouse/Touch:</strong> Haz clic en las teclas del piano
-                </p>
-                <p>
-                  <strong>Canciones:</strong> Ve al botón "Canciones" para tutoriales interactivos
-                </p>
-              </div>
-              <div>
-                <p>
-                  <strong>3 Octavas:</strong> Piano con 3 octavas fijas para mayor rango
-                </p>
-                <p>
-                  <strong>Configuración:</strong> Personaliza el mapeo de teclas en el botón "Configurar Teclas"
-                </p>
-                <p>
-                  <strong>Tutoriales:</strong> Las teclas azules muestran qué notas tocar en las canciones
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Estado de grabación */}
-        {(isRecording || recordedNotes.length > 0) && (
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  {isRecording && (
-                    <div className="flex items-center text-red-600">
-                      <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse mr-2"></div>
-                      Grabando...
-                    </div>
-                  )}
-                  {recordedNotes.length > 0 && !isRecording && (
-                    <div className="text-green-600">✓ {recordedNotes.length} notas grabadas</div>
-                  )}
-                </div>
-                {isPlaying && <div className="text-blue-600">🎵 Reproduciendo...</div>}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        {/* Instrucciones minimalistas */}
+        <div className="text-center text-gray-400 text-sm space-y-2">
+          <p>Usa tu teclado físico o haz clic en las teclas del piano</p>
+          {tutorialHighlightedKeys.size > 0 && (
+            <p className="text-blue-400">Las teclas azules indican las notas a tocar</p>
+          )}
+        </div>
       </div>
     </div>
   )
