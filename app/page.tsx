@@ -441,7 +441,7 @@ export default function VirtualPiano() {
       <div className="border-b border-gray-800 bg-gray-900">
         <div className="max-w-6xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-light text-white">Piano</h1>
+            <h1 className="text-2xl font-light text-white">Piano - La Bandina</h1>
             
             {/* Botón de menú (hamburguer) */}
             <button
@@ -536,23 +536,13 @@ export default function VirtualPiano() {
           </div>
         )}
 
-        {/* Inicialización de Audio */}
-        {!audioInitialized && (
-          <div className="mb-8 bg-gray-900 border border-gray-700 rounded-lg p-8 text-center">
-            <p className="mb-4 text-gray-300">
-              Presiona para inicializar el audio del piano
-            </p>
-            <button 
-              onClick={initAudio}
-              className="px-6 py-3 bg-white text-black rounded hover:bg-gray-200 transition-colors font-medium"
-            >
-              Inicializar Piano
-            </button>
-          </div>
-        )}
-
         {/* Piano */}
         <div className="bg-gray-900 border border-gray-700 rounded-lg p-8">
+          {!audioInitialized && (
+            <div className="text-center text-gray-400 text-sm mb-6">
+              Presiona cualquier tecla para comenzar
+            </div>
+          )}
           <div className="flex justify-center overflow-x-auto">
             {renderKeyboard()}
           </div>
