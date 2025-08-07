@@ -9,11 +9,53 @@ import TutorialPiano from '@/components/songs/TutorialPiano';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, BookOpen, Music } from 'lucide-react';
 import Link from 'next/link';
+import * as Tone from 'tone';
 
 export default function SongsPage() {
   const [favorites, setFavorites] = useState<string[]>([]);
   const [showTutorial, setShowTutorial] = useState(false);
   const [customSongs, setCustomSongs] = useState<Song[]>([]);
+  const [synth, setSynth] = useState<Tone.PolySynth | null>(null);
+  const [audioInitialized, setAudioInitialized] = useState(false);
+
+  // Initialize audio
+  const initAudio = useCallback(async () => {
+    try {
+      await Tone.start();
+      console.log('Audio context started');
+      
+      // Create synth
+      const polySynth = new Tone.PolySynth(Tone.Synth).toDestination();
+      setSynth(polySynth);
+      setAudioInitialized(true);
+      
+      console.log('Synth initialized');
+    } catch (error) {
+      console.error('Error initializing audio:', error);
+    }
+  }, []);
+
+  // Play note with octave
+  const playNoteWithOctave = useCallback(async (note: string, octave: number) => {
+    if (!synth) {
+      console.log('Synth not initialized');
+      return;
+    }
+
+    // Ensure audio context is active
+    if (Tone.context.state === 'suspended') {
+      await Tone.start();
+    }
+
+    const noteWithOctave = `${note}${octave}`;
+    console.log('Playing note:', noteWithOctave);
+    synth.triggerAttack(noteWithOctave);
+    
+    // Release note after a short duration to avoid hanging notes
+    setTimeout(() => {
+      synth.triggerRelease(noteWithOctave);
+    }, 200);
+  }, [synth]);
 
   const {
     currentSong,
@@ -29,7 +71,11 @@ export default function SongsPage() {
     updatePosition,
     handleKeyPress,
     reset
-  } = useSongTutorial();
+  } = useSongTutorial({
+    playNoteWithOctave,
+    initAudio,
+    audioInitialized
+  });
 
   // Load favorites from localStorage
   useEffect(() => {
@@ -43,7 +89,12 @@ export default function SongsPage() {
     if (savedCustomSongs) {
       setCustomSongs(JSON.parse(savedCustomSongs));
     }
-  }, []);
+
+    // Initialize audio automatically
+    if (!audioInitialized) {
+      initAudio();
+    }
+  }, [audioInitialized, initAudio]);
 
   // Save favorites to localStorage
   useEffect(() => {

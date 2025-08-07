@@ -3,7 +3,11 @@
 import { useState, useCallback } from 'react';
 import { Song, SongProgress, TutorialState } from '@/types/song';
 
-export const useSongTutorial = () => {
+export const useSongTutorial = (audioFunctions?: {
+  playNoteWithOctave: (note: string, octave: number) => Promise<void>;
+  initAudio: () => Promise<void>;
+  audioInitialized: boolean;
+}) => {
   const [currentSong, setCurrentSong] = useState<Song | null>(null);
   const [progress, setProgress] = useState<SongProgress | null>(null);
   const [tutorialState, setTutorialState] = useState<TutorialState>({
@@ -71,13 +75,76 @@ export const useSongTutorial = () => {
     return simultaneousNotes;
   }, []);
 
-  const playTutorial = useCallback(() => {
+  const playTutorial = useCallback(async () => {
+    if (!currentSong || !audioFunctions) {
+      console.log('🎵 No hay canción o funciones de audio disponibles');
+      return;
+    }
+    
+    console.log('🎵 Reproduciendo soundtrack de la canción');
+    
     setTutorialState(prev => ({
       ...prev,
       isPlaying: true,
       isPaused: false
     }));
-  }, []);
+    
+    // Inicializar audio si no está inicializado
+    if (!audioFunctions.audioInitialized) {
+      try {
+        await audioFunctions.initAudio();
+      } catch (error) {
+        console.error('Error initializing audio:', error);
+        return;
+      }
+    }
+    
+    console.log('🎶 Reproduciendo soundtrack con', currentSong.notes.length, 'notas');
+    
+    // Crear una copia de las notas ordenadas por tiempo
+    const sortedNotes = [...currentSong.notes].sort((a, b) => a.startTime - b.startTime);
+    
+    // Función para reproducir una nota
+    const playNoteAtTime = (note: any, delay: number) => {
+      setTimeout(async () => {
+        try {
+          // Extraer la nota y octava del key (ej: "C4" -> note="C", octave=4)
+          const match = note.key.match(/^([A-G]#?)(\d+)$/);
+          if (match) {
+            const noteName = match[1];
+            const octave = parseInt(match[2]);
+            console.log(`🎹 Reproduciendo: ${noteName}${octave}`);
+            await audioFunctions.playNoteWithOctave(noteName, octave);
+          }
+        } catch (error) {
+          console.error('Error playing note:', error);
+        }
+      }, delay);
+    };
+    
+    // Programar todas las notas para reproducirse en su momento
+    const adjustedSpeed = 1 / tutorialState.playbackSpeed;
+    
+    sortedNotes.forEach((note) => {
+      const delay = note.startTime * adjustedSpeed;
+      playNoteAtTime(note, delay);
+    });
+    
+    // Calcular duración total y programar parada automática
+    if (sortedNotes.length > 0) {
+      const totalDuration = sortedNotes[sortedNotes.length - 1].startTime + 
+                           sortedNotes[sortedNotes.length - 1].duration;
+      const adjustedTotalDuration = totalDuration * adjustedSpeed;
+      
+      setTimeout(() => {
+        console.log('🎉 Soundtrack completado');
+        setTutorialState(prev => ({
+          ...prev,
+          isPlaying: false
+        }));
+      }, adjustedTotalDuration + 1000);
+    }
+  }, [currentSong, tutorialState.playbackSpeed, audioFunctions]);
 
   const pauseTutorial = useCallback(() => {
     setTutorialState(prev => ({
