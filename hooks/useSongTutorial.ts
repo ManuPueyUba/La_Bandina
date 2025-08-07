@@ -17,6 +17,7 @@ export const useSongTutorial = () => {
   const [highlightedKeys, setHighlightedKeys] = useState<Set<string>>(new Set());
   const [currentNoteIndex, setCurrentNoteIndex] = useState(0);
   const [isCompleted, setIsCompleted] = useState(false);
+  const [pressedKeysInChord, setPressedKeysInChord] = useState<Set<string>>(new Set());
 
   const startTutorial = useCallback((song: Song) => {
     setCurrentSong(song);
@@ -37,13 +38,37 @@ export const useSongTutorial = () => {
       highlightColor: '#3B82F6'
     });
     
-    // Mostrar la primera nota a tocar
+    // Mostrar las primeras notas a tocar (pueden ser un acorde)
     setCurrentNoteIndex(0);
     setIsCompleted(false);
+    setPressedKeysInChord(new Set());
     if (song.notes.length > 0) {
-      const firstNote = song.notes[0];
-      setHighlightedKeys(new Set([firstNote.key]));
+      // Agrupar notas que empiezan al mismo tiempo
+      const firstNotes = getNotesAtCurrentIndex(song.notes, 0);
+      const keysToHighlight = new Set(firstNotes.map(note => note.key));
+      setHighlightedKeys(keysToHighlight);
+      console.log('Tutorial iniciado - Notas a tocar:', Array.from(keysToHighlight));
     }
+  }, []);
+
+  // Función auxiliar para obtener todas las notas que empiezan al mismo tiempo
+  const getNotesAtCurrentIndex = useCallback((notes: Song['notes'], index: number) => {
+    if (index >= notes.length) return [];
+    
+    const currentNote = notes[index];
+    const simultaneousNotes = [currentNote];
+    
+    // Buscar notas adicionales que empiecen al mismo tiempo (tolerancia de 10ms)
+    for (let i = index + 1; i < notes.length; i++) {
+      const nextNote = notes[i];
+      if (Math.abs(nextNote.startTime - currentNote.startTime) <= 10) {
+        simultaneousNotes.push(nextNote);
+      } else {
+        break; // Las siguientes notas ya no son simultáneas
+      }
+    }
+    
+    return simultaneousNotes;
   }, []);
 
   const playTutorial = useCallback(() => {
@@ -88,47 +113,74 @@ export const useSongTutorial = () => {
   const handleKeyPress = useCallback((key: string) => {
     if (!currentSong || !progress) return;
 
-    const currentNote = currentSong.notes[currentNoteIndex];
+    // Obtener las notas actuales (pueden ser un acorde)
+    const currentNotes = getNotesAtCurrentIndex(currentSong.notes, currentNoteIndex);
+    const expectedKeys = new Set(currentNotes.map(note => note.key));
     
     console.log('Key pressed:', key);
     console.log('Current note index:', currentNoteIndex);
-    console.log('Expected note:', currentNote?.key);
-    console.log('Total notes:', currentSong.notes.length);
+    console.log('Expected keys:', Array.from(expectedKeys));
+    console.log('Current notes count:', currentNotes.length);
     
-    if (currentNote && currentNote.key === key) {
-      // Nota correcta
-      const newCompletedNotes = progress.completedNotes + 1;
-      const newAccuracy = (newCompletedNotes / currentSong.notes.length) * 100;
+    if (expectedKeys.has(key)) {
+      // Tecla correcta presionada
+      console.log('✅ Tecla correcta presionada:', key);
       
-      setProgress(prev => prev ? {
-        ...prev,
-        completedNotes: newCompletedNotes,
-        accuracy: newAccuracy,
-        bestScore: Math.max(prev.bestScore, newAccuracy),
-        lastPlayedAt: new Date()
-      } : null);
+      // Agregar la tecla a las teclas presionadas del acorde actual
+      const newPressedKeys = new Set(pressedKeysInChord);
+      newPressedKeys.add(key);
+      setPressedKeysInChord(newPressedKeys);
       
-      // Avanzar al siguiente índice
-      const nextIndex = currentNoteIndex + 1;
-      setCurrentNoteIndex(nextIndex);
+      console.log('Teclas presionadas en el acorde:', Array.from(newPressedKeys));
+      console.log('Teclas requeridas:', Array.from(expectedKeys));
       
-      console.log('Advancing to next note:', nextIndex);
+      // Verificar si se han presionado todas las teclas del acorde
+      const allKeysPressed = Array.from(expectedKeys).every(k => newPressedKeys.has(k));
       
-      // Mostrar la siguiente nota a tocar
-      if (nextIndex < currentSong.notes.length) {
-        const nextNote = currentSong.notes[nextIndex];
-        console.log('Next note to highlight:', nextNote.key);
-        setHighlightedKeys(new Set([nextNote.key]));
+      if (allKeysPressed) {
+        // Todas las teclas del acorde han sido presionadas
+        const notesCompleted = currentNotes.length;
+        const newCompletedNotes = progress.completedNotes + notesCompleted;
+        const newAccuracy = (newCompletedNotes / currentSong.notes.length) * 100;
+        
+        setProgress(prev => prev ? {
+          ...prev,
+          completedNotes: newCompletedNotes,
+          accuracy: newAccuracy,
+          bestScore: Math.max(prev.bestScore, newAccuracy),
+          lastPlayedAt: new Date()
+        } : null);
+        
+        // Resetear las teclas presionadas para el siguiente acorde
+        setPressedKeysInChord(new Set());
+        
+        // Avanzar al siguiente grupo de notas
+        const nextIndex = currentNoteIndex + currentNotes.length;
+        setCurrentNoteIndex(nextIndex);
+        
+        console.log('✅ Acorde/nota completado. Avanzando al índice:', nextIndex);
+        
+        // Mostrar las siguientes notas a tocar
+        if (nextIndex < currentSong.notes.length) {
+          const nextNotes = getNotesAtCurrentIndex(currentSong.notes, nextIndex);
+          const nextKeysToHighlight = new Set(nextNotes.map(note => note.key));
+          setHighlightedKeys(nextKeysToHighlight);
+          console.log('⏭️ Siguientes notas a tocar:', Array.from(nextKeysToHighlight));
+        } else {
+          // Tutorial completado
+          setHighlightedKeys(new Set());
+          setIsCompleted(true);
+          console.log('🎉 ¡Tutorial completado!');
+        }
       } else {
-        // Tutorial completado
-        setHighlightedKeys(new Set());
-        setIsCompleted(true);
-        console.log('¡Tutorial completado!');
+        // Aún faltan teclas por presionar en el acorde
+        const remainingKeys = Array.from(expectedKeys).filter(k => !newPressedKeys.has(k));
+        console.log('⏳ Faltan teclas del acorde:', remainingKeys);
       }
     } else {
-      console.log('Incorrect key. Expected:', currentNote?.key, 'Got:', key);
+      console.log('❌ Tecla incorrecta. Esperada:', Array.from(expectedKeys), 'Recibida:', key);
     }
-  }, [currentSong, progress, currentNoteIndex]);
+  }, [currentSong, progress, currentNoteIndex, pressedKeysInChord, getNotesAtCurrentIndex]);
 
   const reset = useCallback(() => {
     setCurrentSong(null);
@@ -144,6 +196,7 @@ export const useSongTutorial = () => {
     setHighlightedKeys(new Set());
     setCurrentNoteIndex(0);
     setIsCompleted(false);
+    setPressedKeysInChord(new Set());
   }, []);
 
   return {

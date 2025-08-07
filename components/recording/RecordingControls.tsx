@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/card';
 import { useRecording } from '@/hooks/useRecording';
 import { Recording, Note } from '@/types/song';
 import { downloadMidiFile } from '@/lib/midi-export';
+import { processNotesForChords } from '@/lib/chord-processor';
 import { 
   Mic, 
   Square, 
@@ -81,14 +82,17 @@ export default function RecordingControls({
     // Guardar información ANTES de detener (para mostrar en el modal)
     const currentDuration = recordingState.duration;
     
-    const notes = stopRecording();
-    console.log('Notas grabadas al detener:', notes.length); // Debug
-    console.log('Notas completas:', notes); // Debug detallado
+    const rawNotes = stopRecording();
+    console.log('Notas raw grabadas:', rawNotes.length, rawNotes); // Debug
     
-    if (notes.length > 0) {
+    // Procesar notas para agrupar acordes
+    const processedNotes = processNotesForChords(rawNotes, 150); // 150ms de tolerancia para acordes
+    console.log('Notas procesadas con acordes:', processedNotes.length, processedNotes); // Debug
+    
+    if (processedNotes.length > 0) {
       // Guardar información para mostrar en el modal
       setStoppedRecordingInfo({
-        notes,
+        notes: processedNotes,
         duration: currentDuration
       });
       setShowSaveDialog(true);
