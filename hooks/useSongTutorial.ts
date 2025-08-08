@@ -32,10 +32,10 @@ export const useSongTutorial = (audioFunctions?: {
     const currentNote = notes[index];
     const simultaneousNotes = [currentNote];
     
-    // Buscar notas adicionales que empiecen al mismo tiempo (tolerancia de 10ms)
+    // Buscar notas adicionales que empiecen al mismo tiempo (tolerancia de 100ms para mejor detección de acordes)
     for (let i = index + 1; i < notes.length; i++) {
       const nextNote = notes[i];
-      if (Math.abs(nextNote.startTime - currentNote.startTime) <= 10) {
+      if (Math.abs(nextNote.startTime - currentNote.startTime) <= 100) {
         simultaneousNotes.push(nextNote);
       } else {
         break; // Las siguientes notas ya no son simultáneas
