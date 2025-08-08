@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Play, Square, RotateCcw, Volume2, Settings, Music, Mic, Download, Save } from "lucide-react"
 import Link from "next/link"
 import { AuthButton } from "@/components/auth/AuthButton"
+import { ApiClient, CreateRecordingRequest, RecordingResponse } from "@/lib/api"
 
 // Tipos para las notas y escalas
 type Note = string
@@ -229,56 +230,67 @@ export default function VirtualPiano() {
     setRecordingStartTime(Date.now())
   }, [])
 
-  const stopRecording = useCallback(() => {
+  const stopRecording = useCallback(async () => {
     setIsRecording(false)
     if (currentRecording.length > 0 && recordingStartTime) {
       const duration = Date.now() - recordingStartTime
-      const newRecording: Recording = {
-        id: `recording-${Date.now()}`,
-        name: `Grabación ${recordings.length + 1}`,
-        notes: currentRecording,
-        duration,
-        createdAt: new Date()
+      
+      try {
+        // Preparar datos para el backend
+        const recordingData: CreateRecordingRequest = {
+          title: `Grabación ${recordings.length + 1}`,
+          artist: "Usuario",
+          bpm: 120, // BPM por defecto
+          key_signature: "C major",
+          description: `Grabación realizada el ${new Date().toLocaleString()}`,
+          notes: currentRecording.map(note => ({
+            note: note.note,
+            octave: note.octave,
+            start_time: note.startTime,
+            end_time: note.endTime || note.startTime + 500, // Si no hay endTime, usar 500ms por defecto
+            velocity: note.velocity
+          }))
+        }
+
+        // Enviar al backend
+        const backendRecording = await ApiClient.createRecording(recordingData)
+        
+        // Crear recording local para la UI
+        const newRecording: Recording = {
+          id: backendRecording.id,
+          name: backendRecording.title,
+          notes: currentRecording,
+          duration,
+          createdAt: new Date()
+        }
+        
+        setRecordings(prev => [...prev, newRecording])
+        console.log('Grabación guardada en el backend:', backendRecording)
+      } catch (error) {
+        console.error('Error al guardar la grabación:', error)
+        // Fallback: guardar localmente si falla el backend
+        const newRecording: Recording = {
+          id: `recording-${Date.now()}`,
+          name: `Grabación ${recordings.length + 1}`,
+          notes: currentRecording,
+          duration,
+          createdAt: new Date()
+        }
+        setRecordings(prev => [...prev, newRecording])
+        alert('No se pudo conectar con el servidor. La grabación se guardó localmente.')
       }
-      setRecordings(prev => [...prev, newRecording])
     }
     setCurrentRecording([])
     setRecordingStartTime(null)
   }, [currentRecording, recordingStartTime, recordings.length])
 
-  const exportToMidi = useCallback((recording: Recording) => {
+  const exportToMidi = useCallback(async (recording: Recording) => {
     try {
-      // Crear un nuevo archivo MIDI
-      const midi = new Midi()
-      const track = midi.addTrack()
-
-      // Convertir las notas grabadas a eventos MIDI
-      recording.notes.forEach(recordedNote => {
-        const { note, octave, startTime, endTime, velocity } = recordedNote
-        const startTimeSeconds = startTime / 1000
-        const duration = endTime ? (endTime - startTime) / 1000 : 0.5
-
-        // Convertir nota a número MIDI manualmente
-        const noteToMidi = (note: string, octave: number): number => {
-          const noteMap: { [key: string]: number } = {
-            'C': 0, 'C#': 1, 'D': 2, 'D#': 3, 'E': 4, 'F': 5,
-            'F#': 6, 'G': 7, 'G#': 8, 'A': 9, 'A#': 10, 'B': 11
-          }
-          return (octave + 1) * 12 + (noteMap[note] || 0)
-        }
-
-        track.addNote({
-          midi: noteToMidi(note, octave),
-          time: startTimeSeconds,
-          duration: duration,
-          velocity: velocity
-        })
-      })
-
-      // Crear y descargar el archivo
-      const midiData = midi.toArray()
-      const blob = new Blob([midiData], { type: 'audio/midi' })
-      const url = URL.createObjectURL(blob)
+      // Intentar usar el backend primero
+      const midiBlob = await ApiClient.exportRecordingAsMidi(recording.id)
+      
+      // Crear y descargar el archivo desde el backend
+      const url = URL.createObjectURL(midiBlob)
       const a = document.createElement('a')
       a.href = url
       a.download = `${recording.name}.mid`
@@ -286,23 +298,71 @@ export default function VirtualPiano() {
       a.click()
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
+      
     } catch (error) {
-      console.error('Error exporting MIDI:', error)
-      alert('Error al exportar el archivo MIDI')
+      console.error('Error exporting from backend, falling back to local:', error)
+      
+      // Fallback: generar MIDI localmente
+      try {
+        const midi = new Midi()
+        const track = midi.addTrack()
+
+        // Convertir las notas grabadas a eventos MIDI
+        recording.notes.forEach(recordedNote => {
+          const { note, octave, startTime, endTime, velocity } = recordedNote
+          const startTimeSeconds = startTime / 1000
+          const duration = endTime ? (endTime - startTime) / 1000 : 0.5
+
+          // Convertir nota a número MIDI manualmente
+          const noteToMidi = (note: string, octave: number): number => {
+            const noteMap: { [key: string]: number } = {
+              'C': 0, 'C#': 1, 'D': 2, 'D#': 3, 'E': 4, 'F': 5,
+              'F#': 6, 'G': 7, 'G#': 8, 'A': 9, 'A#': 10, 'B': 11
+            }
+            return (octave + 1) * 12 + (noteMap[note] || 0)
+          }
+
+          track.addNote({
+            midi: noteToMidi(note, octave),
+            time: startTimeSeconds,
+            duration: duration,
+            velocity: velocity
+          })
+        })
+
+        // Crear y descargar el archivo
+        const midiData = midi.toArray()
+        const blob = new Blob([new Uint8Array(midiData)], { type: 'audio/midi' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `${recording.name}.mid`
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+        
+      } catch (localError) {
+        console.error('Error exporting MIDI locally:', localError)
+        alert('Error al exportar el archivo MIDI')
+      }
     }
   }, [])
 
-  const saveRecordingForTutorial = useCallback((recording: Recording) => {
-    // Guardar en localStorage para usar como tutorial
-    const tutorialData = {
-      name: recording.name,
-      notes: recording.notes,
-      duration: recording.duration
+  const saveRecordingForTutorial = useCallback(async (recording: Recording) => {
+    try {
+      // Convert recording to song format using backend
+      await ApiClient.convertRecordingToSong(recording.id, { 
+        title: recording.name,
+        difficulty: 'beginner',
+        category: 'manual_recording'
+      })
+      
+      alert(`Tutorial "${recording.name}" convertido y guardado correctamente`)
+    } catch (error) {
+      console.error('Error converting recording to tutorial:', error)
+      alert('Error al convertir la grabación a tutorial')
     }
-    const savedTutorials = JSON.parse(localStorage.getItem('pianoTutorials') || '[]')
-    savedTutorials.push(tutorialData)
-    localStorage.setItem('pianoTutorials', JSON.stringify(savedTutorials))
-    alert(`Tutorial "${recording.name}" guardado correctamente`)
   }, [])
 
   // Tocar una nota con octava específica
@@ -466,7 +526,7 @@ export default function VirtualPiano() {
           relative select-none transition-all duration-100 flex-shrink-0
           ${
             isBlack
-              ? `w-8 h-48 -mx-4 z-10 rounded-b-md border-b-2 border-gray-800
+              ? `w-7 h-48 z-10 rounded-b-md border-b-2 border-gray-800
                ${isTutorialHighlighted 
                   ? "bg-blue-500 hover:bg-blue-600 shadow-lg" 
                   : isTutorialUpcoming
@@ -549,13 +609,42 @@ export default function VirtualPiano() {
                 ))}
               </div>
 
-              {/* Teclas negras */}
-              <div className="absolute top-0 left-0 w-full flex">
-                {blackKeys.map((note, index) => (
-                  <div key={`${note}-${octave}-${index}`} className="flex-1 flex justify-center">
-                    {note && <PianoKey note={note} octave={octave} isBlack />}
+              {/* Teclas negras - posicionadas correctamente entre las blancas */}
+              <div className="absolute top-0 left-0 w-full flex pointer-events-none">
+                {/* C# - entre C y D */}
+                <div className="flex-1 flex justify-center pl-4">
+                  <div className="pointer-events-auto">
+                    <PianoKey note="C#" octave={octave} isBlack />
                   </div>
-                ))}
+                </div>
+                {/* D# - entre D y E */}
+                <div className="flex-1 flex justify-center pl-4">
+                  <div className="pointer-events-auto">
+                    <PianoKey note="D#" octave={octave} isBlack />
+                  </div>
+                </div>
+                {/* Espacio para E (sin sostenido) */}
+                <div className="flex-1"></div>
+                {/* F# - entre F y G */}
+                <div className="flex-1 flex justify-center pl-4">
+                  <div className="pointer-events-auto">
+                    <PianoKey note="F#" octave={octave} isBlack />
+                  </div>
+                </div>
+                {/* G# - entre G y A */}
+                <div className="flex-1 flex justify-center pl-4">
+                  <div className="pointer-events-auto">
+                    <PianoKey note="G#" octave={octave} isBlack />
+                  </div>
+                </div>
+                {/* A# - entre A y B */}
+                <div className="flex-1 flex justify-center pl-4">
+                  <div className="pointer-events-auto">
+                    <PianoKey note="A#" octave={octave} isBlack />
+                  </div>
+                </div>
+                {/* Espacio para B (sin sostenido) */}
+                <div className="flex-1"></div>
               </div>
             </div>
           ))}
@@ -601,10 +690,10 @@ export default function VirtualPiano() {
       {/* Contenido principal que se expande */}
       <div className="flex-1 flex flex-col">
         <div className="max-w-7xl mx-auto px-6 py-6 w-full flex-1 flex flex-col">
-          {/* Menú desplegable oculto */}
+          {/* Menú desplegable simplificado */}
           {showControls && (
             <div className="mb-6 bg-gray-900 border border-gray-700 rounded-lg p-6 flex-shrink-0">
-              <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Navegación */}
                 <div className="space-y-3">
                   <h3 className="text-sm font-medium text-gray-300 uppercase tracking-wider">Navegación</h3>
@@ -622,64 +711,7 @@ export default function VirtualPiano() {
                   </div>
                 </div>
 
-                {/* Grabación */}
-                <div className="space-y-3">
-                  <h3 className="text-sm font-medium text-gray-300 uppercase tracking-wider">Grabación</h3>
-                  <div className="space-y-2">
-                    <Button
-                      onClick={isRecording ? stopRecording : startRecording}
-                      className={`w-full ${
-                        isRecording 
-                          ? 'bg-red-600 hover:bg-red-700 text-white' 
-                          : 'bg-gray-700 hover:bg-gray-600 text-gray-300'
-                      } transition-colors`}
-                      size="sm"
-                    >
-                      {isRecording ? (
-                        <>
-                          <Square className="w-3 h-3 mr-2" />
-                          Parar
-                        </>
-                      ) : (
-                        <>
-                          <Mic className="w-3 h-3 mr-2" />
-                          Grabar
-                        </>
-                      )}
-                    </Button>
-                    {recordings.length > 0 && (
-                      <div className="text-xs text-gray-400">
-                        {recordings.length} grabación{recordings.length !== 1 ? 'es' : ''}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Octava */}
-                <div className="space-y-3">
-                  <h3 className="text-sm font-medium text-gray-300 uppercase tracking-wider">Octava</h3>
-                  <div className="flex items-center space-x-3">
-                    <button
-                      onClick={() => setCurrentOctave(Math.max(1, currentOctave - 1))}
-                      disabled={currentOctave <= 1}
-                      className="w-8 h-8 rounded bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    >
-                      -
-                    </button>
-                    <span className="font-mono text-lg text-white min-w-[3rem] text-center">
-                      {currentOctave}
-                    </span>
-                    <button
-                      onClick={() => setCurrentOctave(Math.min(8 - numberOfOctaves, currentOctave + 1))}
-                      disabled={currentOctave + numberOfOctaves > 7}
-                      className="w-8 h-8 rounded bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    >
-                      +
-                    </button>
-                  </div>
-                </div>
-
-                {/* Escala */}
+                {/* Configuración de Escala */}
                 <div className="space-y-3">
                   <h3 className="text-sm font-medium text-gray-300 uppercase tracking-wider">Escala</h3>
                   <Select value={currentScale} onValueChange={(value: Scale) => setCurrentScale(value)}>
@@ -693,34 +725,108 @@ export default function VirtualPiano() {
                     </SelectContent>
                   </Select>
                 </div>
-
-                {/* Volumen */}
-                <div className="space-y-3">
-                  <h3 className="text-sm font-medium text-gray-300 uppercase tracking-wider">Volumen</h3>
-                  <div className="space-y-2">
-                    <input
-                      type="range"
-                      min="-30"
-                      max="0"
-                      value={volume}
-                      onChange={(e) => setVolume(Number(e.target.value))}
-                      className="w-full h-2 bg-gray-700 rounded-lg appearance-none slider"
-                    />
-                    <div className="text-xs text-gray-400 text-center">{volume}dB</div>
-                  </div>
-                </div>
               </div>
             </div>
           )}
 
-          {/* Piano - Ocupa todo el espacio disponible */}
-          <div className="flex-1 bg-gray-900 border border-gray-700 rounded-lg p-6 flex flex-col justify-center">
-            {!audioInitialized && (
-              <div className="text-center text-gray-400 text-sm mb-6 flex-shrink-0">
-                Presiona cualquier tecla para comenzar
+          {/* Piano con controles integrados */}
+          <div className="bg-gray-900 border border-gray-700 rounded-lg p-6 flex flex-col">
+            {/* Controles superiores */}
+            <div className="flex justify-between items-center mb-2 flex-shrink-0">
+              {/* Panel izquierdo - Grabación */}
+              <div className="flex items-center space-x-4">
+                <Button
+                  onClick={isRecording ? stopRecording : startRecording}
+                  className={`${
+                    isRecording 
+                      ? 'bg-red-600 hover:bg-red-700 text-white' 
+                      : 'bg-gray-700 hover:bg-gray-600 text-gray-300'
+                  } transition-colors`}
+                  size="sm"
+                >
+                  {isRecording ? (
+                    <>
+                      <Square className="w-4 h-4 mr-2" />
+                      Parar
+                    </>
+                  ) : (
+                    <>
+                      <Mic className="w-4 h-4 mr-2" />
+                      Grabar
+                    </>
+                  )}
+                </Button>
+                {recordings.length > 0 && (
+                  <div className="text-xs text-gray-400">
+                    {recordings.length} grabación{recordings.length !== 1 ? 'es' : ''}
+                  </div>
+                )}
               </div>
-            )}
-            <div className="flex justify-center flex-1 items-center">
+
+              {/* Panel central - Octava */}
+              <div className="flex items-center space-x-3">
+                <span className="text-sm text-gray-400">Octava:</span>
+                <button
+                  onClick={() => setCurrentOctave(Math.max(1, currentOctave - 1))}
+                  disabled={currentOctave <= 1}
+                  className="w-8 h-8 rounded bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-white"
+                >
+                  -
+                </button>
+                <span className="font-mono text-lg text-white min-w-[2rem] text-center">
+                  {currentOctave}
+                </span>
+                <button
+                  onClick={() => setCurrentOctave(Math.min(8 - numberOfOctaves, currentOctave + 1))}
+                  disabled={currentOctave + numberOfOctaves > 7}
+                  className="w-8 h-8 rounded bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-white"
+                >
+                  +
+                </button>
+              </div>
+
+              {/* Panel derecho - Volumen */}
+              <div className="flex items-center space-x-3">
+                <Volume2 className="w-4 h-4 text-gray-400" />
+                <div className="relative w-20">
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={Math.round(((volume + 30) / 30) * 100)}
+                    onChange={(e) => {
+                      const normalizedValue = (Number(e.target.value) / 100) * 30 - 30
+                      setVolume(normalizedValue)
+                    }}
+                    className="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer slider-custom"
+                  />
+                  <style jsx>{`
+                    .slider-custom::-webkit-slider-thumb {
+                      appearance: none;
+                      height: 16px;
+                      width: 16px;
+                      border-radius: 50%;
+                      background: white;
+                      cursor: pointer;
+                      box-shadow: 0 0 2px rgba(0,0,0,0.3);
+                    }
+                    .slider-custom::-moz-range-thumb {
+                      height: 16px;
+                      width: 16px;
+                      border-radius: 50%;
+                      background: white;
+                      cursor: pointer;
+                      border: none;
+                      box-shadow: 0 0 2px rgba(0,0,0,0.3);
+                    }
+                  `}</style>
+                </div>
+                <span className="text-xs text-gray-400 min-w-[3rem]">{Math.round(((volume + 30) / 30) * 100)}%</span>
+              </div>
+            </div>
+
+            {/* Piano */}
+            <div className="flex justify-center items-center">
               <div className="w-full max-w-7xl">
                 {renderKeyboard()}
               </div>

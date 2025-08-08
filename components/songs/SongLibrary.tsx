@@ -3,10 +3,11 @@
 import { useState, useMemo } from 'react';
 import { Song } from '@/types/song';
 import { sampleSongs, songCategories, difficultyLevels } from '@/data/songs';
+import { useSongsFromBackend } from '@/hooks/useSongsFromBackend';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Play, Star, Clock, BarChart3, Upload, Music } from 'lucide-react';
+import { Search, Play, Star, Clock, BarChart3, Upload, Music, RefreshCw, AlertCircle } from 'lucide-react';
 import { MidiImportDialog } from './MidiImportDialog';
 
 interface SongLibraryProps {
@@ -28,9 +29,15 @@ export default function SongLibrary({
   const [selectedCategory, setSelectedCategory] = useState('Todas');
   const [selectedDifficulty, setSelectedDifficulty] = useState('all');
   const [showMidiImport, setShowMidiImport] = useState(false);
+  
+  // Obtener canciones del backend
+  const { songs: backendSongs, loading, error, refetch } = useSongsFromBackend();
 
-  // Combinar canciones de muestra con canciones importadas
-  const allSongs = useMemo(() => [...sampleSongs, ...customSongs], [customSongs]);
+  // Combinar canciones del backend con canciones locales y custom
+  const allSongs = useMemo(() => {
+    const fallbackSongs = error ? sampleSongs : []; // Solo usar canciones locales si hay error
+    return [...backendSongs, ...fallbackSongs, ...customSongs];
+  }, [backendSongs, customSongs, error]);
 
   const filteredSongs = useMemo(() => {
     return allSongs.filter(song => {
@@ -62,28 +69,72 @@ export default function SongLibrary({
 
   return (
     <div className="space-y-6">
-      {/* Header with Import Button */}
+      {/* Header with Import Button and Backend Status */}
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Biblioteca de Canciones</h2>
-          <p className="text-gray-600">
-            {allSongs.length} canciones disponibles
-            {customSongs.length > 0 && (
-              <span className="ml-2 text-blue-600">
-                ({customSongs.length} importadas)
-              </span>
+          <div className="flex items-center gap-4">
+            <p className="text-gray-600">
+              {allSongs.length} canciones disponibles
+              {customSongs.length > 0 && (
+                <span className="ml-2 text-blue-600">
+                  ({customSongs.length} importadas)
+                </span>
+              )}
+              {backendSongs.length > 0 && (
+                <span className="ml-2 text-green-600">
+                  ({backendSongs.length} del servidor)
+                </span>
+              )}
+            </p>
+            
+            {/* Estado del backend */}
+            {loading && (
+              <div className="flex items-center text-blue-600 text-sm">
+                <RefreshCw className="w-4 h-4 animate-spin mr-1" />
+                Cargando del servidor...
+              </div>
             )}
-          </p>
+            
+            {error && (
+              <div className="flex items-center text-amber-600 text-sm">
+                <AlertCircle className="w-4 h-4 mr-1" />
+                Modo offline (usando canciones locales)
+              </div>
+            )}
+            
+            {!loading && !error && backendSongs.length > 0 && (
+              <div className="flex items-center text-green-600 text-sm">
+                <Music className="w-4 h-4 mr-1" />
+                Conectado al servidor
+              </div>
+            )}
+          </div>
         </div>
-        {onAddCustomSongs && (
+        
+        <div className="flex gap-2">
+          {/* Botón para recargar desde backend */}
           <Button 
-            onClick={() => setShowMidiImport(true)}
+            onClick={refetch}
+            variant="outline"
+            size="sm"
+            disabled={loading}
             className="flex items-center gap-2"
           >
-            <Upload className="w-4 h-4" />
-            Importar MIDI
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            Recargar
           </Button>
-        )}
+          
+          {onAddCustomSongs && (
+            <Button 
+              onClick={() => setShowMidiImport(true)}
+              className="flex items-center gap-2"
+            >
+              <Upload className="w-4 h-4" />
+              Importar MIDI
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Search and Filters */}
