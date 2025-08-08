@@ -145,6 +145,7 @@ export function RegisterForm({ onClose, onSwitchToLogin }: RegisterFormProps) {
               variant="outline" 
               onClick={onClose}
               disabled={isLoading}
+              className="border-gray-600 text-gray-200 hover:bg-gray-800"
             >
               Cancelar
             </Button>

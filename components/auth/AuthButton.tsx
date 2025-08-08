@@ -14,7 +14,7 @@ export function AuthButton() {
 
   if (isLoading) {
     return (
-      <Button variant="outline" disabled>
+      <Button variant="outline" disabled className="border-gray-600 text-gray-400">
         <User className="w-4 h-4 animate-spin" />
         Cargando...
       </Button>
@@ -28,28 +28,28 @@ export function AuthButton() {
         <Button
           variant="outline"
           onClick={() => setShowOptions(!showOptions)}
-          className="flex items-center gap-2"
+          className="flex items-center gap-2 border-gray-600 text-gray-200 hover:bg-gray-800"
         >
           <User className="w-4 h-4" />
           {user?.full_name || user?.username || 'Mi Perfil'}
         </Button>
         
         {showOptions && (
-          <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg z-50">
+          <div className="absolute right-0 mt-2 w-48 bg-gray-800 border border-gray-600 rounded-md shadow-lg z-50">
             <div className="py-1">
-              <button className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+              <button className="block w-full text-left px-4 py-2 text-sm text-gray-200 hover:bg-gray-700">
                 Ver Perfil
               </button>
-              <button className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+              <button className="block w-full text-left px-4 py-2 text-sm text-gray-200 hover:bg-gray-700">
                 Configuración
               </button>
-              <hr className="my-1" />
+              <hr className="my-1 border-gray-600" />
               <button 
                 onClick={() => {
                   setShowOptions(false)
                   logout()
                 }}
-                className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
+                className="block w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-gray-700"
               >
                 Cerrar Sesión
               </button>
@@ -66,14 +66,14 @@ export function AuthButton() {
       <Button
         variant="outline"
         onClick={() => setShowOptions(!showOptions)}
-        className="flex items-center gap-2"
+        className="flex items-center gap-2 border-gray-600 text-gray-200 hover:bg-gray-800"
       >
         <LogIn className="w-4 h-4" />
         Cuenta
       </Button>
       
       {showOptions && (
-        <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg z-50">
+        <div className="absolute right-0 mt-2 w-48 bg-gray-800 border border-gray-600 rounded-md shadow-lg z-50">
           <div className="py-1">
             <button 
               onClick={() => {
@@ -81,7 +81,7 @@ export function AuthButton() {
                 setAuthMode("login")
                 setShowAuthModal(true)
               }}
-              className="flex items-center w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+              className="flex items-center w-full text-left px-4 py-2 text-sm text-gray-200 hover:bg-gray-700"
             >
               <LogIn className="w-4 h-4 mr-2" />
               Iniciar Sesión
@@ -92,7 +92,7 @@ export function AuthButton() {
                 setAuthMode("register")
                 setShowAuthModal(true)
               }}
-              className="flex items-center w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+              className="flex items-center w-full text-left px-4 py-2 text-sm text-gray-200 hover:bg-gray-700"
             >
               <UserPlus className="w-4 h-4 mr-2" />
               Registrarse

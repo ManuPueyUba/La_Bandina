@@ -195,7 +195,7 @@ export default function RecordingControls({
   return (
     <div className="space-y-4">
       {/* Recording Status */}
-      <Card className={`p-4 ${recordingState.isRecording ? 'bg-red-50 border-red-200' : 'bg-gray-50'}`}>
+      <Card className={`p-4 ${recordingState.isRecording ? 'bg-red-900 border-red-700' : 'bg-gray-800 border-gray-600'}`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className={`w-3 h-3 rounded-full ${
@@ -230,12 +230,12 @@ export default function RecordingControls({
             ) : (
               <>
                 {recordingState.isPaused ? (
-                  <Button onClick={resumeRecording} variant="outline" className="flex items-center gap-2">
+                  <Button onClick={resumeRecording} variant="outline" className="flex items-center gap-2 border-gray-600 text-gray-200 hover:bg-gray-800">
                     <Play className="w-4 h-4" />
                     Continuar
                   </Button>
                 ) : (
-                  <Button onClick={pauseRecording} variant="outline" className="flex items-center gap-2">
+                  <Button onClick={pauseRecording} variant="outline" className="flex items-center gap-2 border-gray-600 text-gray-200 hover:bg-gray-800">
                     <Pause className="w-4 h-4" />
                     Pausar
                   </Button>
@@ -331,7 +331,7 @@ export default function RecordingControls({
                   />
                 </div>
 
-                <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded">
+                <div className="text-sm text-gray-300 bg-gray-700 p-3 rounded border border-gray-600">
                   <p><strong>Duración:</strong> {stoppedRecordingInfo ? formatDuration(stoppedRecordingInfo.duration) : '0:00.00'}</p>
                   <p><strong>Notas:</strong> {stoppedRecordingInfo ? stoppedRecordingInfo.notes.length : 0}</p>
                 </div>
@@ -369,16 +369,16 @@ Revisa la consola para más detalles.`);
                 }}
                 variant="outline" 
                 size="sm"
-                className="text-xs"
+                className="text-xs border-gray-600 text-gray-200 hover:bg-gray-800"
               >
                 🔍 Debug
               </Button>
             )}
-            <Button onClick={handleDiscardRecording} variant="outline" className="flex items-center gap-2">
+            <Button onClick={handleDiscardRecording} variant="outline" className="flex items-center gap-2 border-gray-600 text-gray-200 hover:bg-gray-800">
               <Trash2 className="w-4 h-4" />
               Descartar
             </Button>
-            <Button onClick={handleSaveRecording} variant="outline" className="flex items-center gap-2">
+            <Button onClick={handleSaveRecording} variant="outline" className="flex items-center gap-2 border-gray-600 text-gray-200 hover:bg-gray-800">
               <Save className="w-4 h-4" />
               Solo Guardar
             </Button>

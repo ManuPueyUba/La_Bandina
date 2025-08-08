@@ -233,8 +233,8 @@ export default function ConfigPage() {
             isBlack
               ? `w-8 h-32 bg-gray-900 hover:bg-gray-800 -mx-4 z-10 rounded-b-md border border-gray-700
                ${isHighlighted ? "bg-blue-600 border-blue-400" : ""}`
-              : `w-12 h-48 bg-white hover:bg-gray-50 border border-gray-300 rounded-b-md
-               ${isHighlighted ? "bg-blue-100 border-blue-400" : ""}`
+              : `w-12 h-48 bg-gray-200 hover:bg-gray-300 border border-gray-400 rounded-b-md
+               ${isHighlighted ? "bg-blue-200 border-blue-400" : ""}`
           }
           ${assignedKey ? (isBlack ? "ring-2 ring-green-400" : "ring-2 ring-green-500") : ""}
         `}
@@ -295,7 +295,7 @@ export default function ConfigPage() {
     const blackKeys = ["C#", "D#", null, "F#", "G#", "A#", null] // null para espacios
 
     return (
-      <div className="relative flex overflow-x-auto bg-gray-100 p-4 rounded-lg">
+      <div className="relative flex overflow-x-auto bg-gray-800 p-4 rounded-lg border border-gray-600">
         {octaves.map((octaveOffset) => (
           <div key={octaveOffset} className="relative flex">
             {/* Teclas blancas */}

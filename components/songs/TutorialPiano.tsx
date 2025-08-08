@@ -250,12 +250,12 @@ export default function TutorialPiano({ highlightedKeys, onKeyPress, onKeyReleas
                   : "bg-gray-900"
                 }
                ${isPressed ? "transform translate-y-1" : ""}`
-              : `w-12 h-48 hover:bg-gray-50 border border-gray-300 rounded-b-md
+              : `w-12 h-48 hover:bg-gray-300 border border-gray-400 rounded-b-md
                ${isHighlighted 
-                  ? "bg-blue-100 border-blue-300 hover:bg-blue-200 ring-2 ring-blue-400" 
-                  : "bg-white"
+                  ? "bg-blue-200 border-blue-400 hover:bg-blue-300 ring-2 ring-blue-400" 
+                  : "bg-gray-200"
                 }
-               ${isPressed ? "bg-gray-200 transform translate-y-1" : ""}`
+               ${isPressed ? "bg-gray-300 transform translate-y-1" : ""}`
           }
           ${isPressed ? "shadow-inner" : "shadow-md"}
         `}

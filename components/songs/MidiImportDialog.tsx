@@ -2,7 +2,6 @@
 
 import React, { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { useMidiImport } from '@/hooks/useMidiImport';
 import { MidiMetadata } from '@/lib/midi-parser';
 import { Song } from '@/types/song';
@@ -134,14 +133,14 @@ export function MidiImportDialog({ onSongsImported, onClose, isOpen }: MidiImpor
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <Card className="w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+      <div className="w-full max-w-4xl max-h-[90vh] overflow-y-auto bg-black/50 backdrop-blur-md rounded-xl border border-gray-800">
         <div className="p-6">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold flex items-center gap-2">
-              <Music className="h-6 w-6" />
+            <h2 className="text-2xl font-bold flex items-center gap-2 text-white">
+              <Music className="h-6 w-6 text-blue-400" />
               Importar Archivos MIDI
             </h2>
-            <Button variant="outline" onClick={onClose}>
+            <Button variant="outline" onClick={onClose} className="border-gray-600 text-gray-200 hover:bg-gray-800">
               Cerrar
             </Button>
           </div>
@@ -198,14 +197,14 @@ export function MidiImportDialog({ onSongsImported, onClose, isOpen }: MidiImpor
               <Button
                 variant="outline"
                 onClick={() => setShowAdvanced(!showAdvanced)}
-                className="flex items-center gap-2 mb-4"
+                className="flex items-center gap-2 mb-4 border-gray-600 text-gray-200 hover:bg-gray-800"
               >
                 <Settings className="h-4 w-4" />
                 {showAdvanced ? 'Ocultar' : 'Mostrar'} Opciones Avanzadas
               </Button>
 
               {showAdvanced && (
-                <Card className="p-4 bg-gray-50">
+                <div className="p-4 bg-gray-900/50 backdrop-blur-sm rounded-xl border border-gray-700">
                   <h4 className="font-medium mb-4">Configuración de Importación</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
@@ -292,7 +291,7 @@ export function MidiImportDialog({ onSongsImported, onClose, isOpen }: MidiImpor
                       y usa máximo 3-4 notas por segundo.
                     </p>
                   </div>
-                </Card>
+                </div>
               )}
             </div>
           )}
@@ -300,9 +299,9 @@ export function MidiImportDialog({ onSongsImported, onClose, isOpen }: MidiImpor
           {/* Files List */}
           {files.length > 0 && (
             <div className="space-y-4 mb-6">
-              <h3 className="text-lg font-semibold">Archivos Seleccionados</h3>
+              <h3 className="text-lg font-semibold text-white">Archivos Seleccionados</h3>
               {files.map((fileWithInfo, index) => (
-                <Card key={index} className="p-4">
+                <div key={index} className="p-4 bg-gray-900/50 backdrop-blur-sm rounded-xl border border-gray-700">
                   <div className="flex items-start gap-4">
                     <div className="flex-shrink-0">
                       {fileWithInfo.status === 'analyzing' && (
@@ -384,14 +383,14 @@ export function MidiImportDialog({ onSongsImported, onClose, isOpen }: MidiImpor
                       )}
                     </div>
                   </div>
-                </Card>
+                </div>
               ))}
             </div>
           )}
 
           {/* Action Buttons */}
           <div className="flex justify-end gap-3">
-            <Button variant="outline" onClick={onClose}>
+            <Button variant="outline" onClick={onClose} className="border-gray-600 text-gray-200 hover:bg-gray-800">
               Cancelar
             </Button>
             <Button 
@@ -403,7 +402,7 @@ export function MidiImportDialog({ onSongsImported, onClose, isOpen }: MidiImpor
             </Button>
           </div>
         </div>
-      </Card>
+      </div>
     </div>
   );
 }

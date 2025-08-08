@@ -138,20 +138,20 @@ export default function RecordingPage() {
   }, [viewMode, recordingHandlers]);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900">
       <div className="container mx-auto px-4 py-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-4">
+          <Button asChild variant="outline" size="sm" className="border-gray-600 text-gray-200 hover:bg-gray-800">
             <Link href="/">
-              <Button variant="outline" size="sm">
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Volver al Piano
-              </Button>
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Volver al Piano
             </Link>
+          </Button>
             <div className="flex items-center gap-2">
-              <Mic className="w-6 h-6 text-red-600" />
-              <h1 className="text-2xl font-bold text-gray-900">
+              <Mic className="w-6 h-6 text-red-400" />
+              <h1 className="text-2xl font-bold text-white">
                 {viewMode === 'recording' && 'Grabación de Piano'}
                 {viewMode === 'library' && 'Mis Grabaciones'}
                 {viewMode === 'practicing' && 'Practicar Grabación'}
@@ -164,7 +164,7 @@ export default function RecordingPage() {
               <Button 
                 onClick={() => setViewMode('recording')} 
                 variant="outline"
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 border-gray-600 text-gray-200 hover:bg-gray-800"
               >
                 <Mic className="w-4 h-4" />
                 Nueva Grabación
@@ -174,14 +174,14 @@ export default function RecordingPage() {
               <Button 
                 onClick={() => setViewMode('library')} 
                 variant="outline"
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 border-gray-600 text-gray-200 hover:bg-gray-800"
               >
                 <Music className="w-4 h-4" />
                 Ver Grabaciones
               </Button>
             )}
             {viewMode === 'practicing' && (
-              <Button onClick={handleBackToLibrary} variant="outline">
+              <Button onClick={handleBackToLibrary} variant="outline" className="border-gray-600 text-gray-200 hover:bg-gray-800">
                 <BookOpen className="w-4 h-4 mr-2" />
                 Ver Grabaciones
               </Button>
@@ -204,11 +204,11 @@ export default function RecordingPage() {
                 onKeyRelease={handleKeyRelease}
               />
 
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                <h3 className="font-semibold text-green-900 mb-2">
+              <div className="bg-green-900/30 backdrop-blur-sm border border-green-700 rounded-xl p-4">
+                <h3 className="font-semibold text-green-300 mb-2">
                   💡 Consejos para una buena grabación:
                 </h3>
-                <ul className="text-green-800 text-sm space-y-1">
+                <ul className="text-green-200 text-sm space-y-1">
                   <li>• Graba a un tempo cómodo, luego puedes ajustar la velocidad en la práctica</li>
                   <li>• Mantén pulsadas las teclas el tiempo que quieras que duren las notas</li>
                   <li>• Puedes pausar y continuar la grabación cuando necesites</li>

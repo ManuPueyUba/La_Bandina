@@ -153,6 +153,7 @@ export default function RecordingLibrary({
                       onClick={handleEditCancel} 
                       variant="outline" 
                       size="sm"
+                      className="border-gray-600 text-gray-200 hover:bg-gray-800"
                     >
                       <X className="w-3 h-3" />
                     </Button>
@@ -233,7 +234,7 @@ export default function RecordingLibrary({
                       onClick={() => handleDownloadMidi(recording)}
                       variant="outline"
                       size="sm"
-                      className="flex items-center gap-1"
+                      className="flex items-center gap-1 border-gray-600 text-gray-200 hover:bg-gray-800"
                       title="Descargar como MIDI"
                     >
                       <Download className="w-4 h-4" />

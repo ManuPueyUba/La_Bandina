@@ -177,12 +177,12 @@ export default function SongsPage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-4">
-            <Link href="/">
-              <Button variant="outline" size="sm" className="border-gray-600 text-gray-200 hover:bg-gray-800">
+            <Button asChild variant="outline" size="sm" className="border-gray-600 text-gray-200 hover:bg-gray-800">
+              <Link href="/">
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Volver al Piano
-              </Button>
-            </Link>
+              </Link>
+            </Button>
             <div className="flex items-center gap-2">
               <Music className="w-6 h-6 text-blue-400" />
               <h1 className="text-2xl font-bold text-white">
