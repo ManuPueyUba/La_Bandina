@@ -3,7 +3,6 @@
 import { useEffect, useCallback } from 'react';
 import { Song, TutorialState, SongProgress } from '@/types/song';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { Play, Pause, Square, SkipBack, SkipForward, Volume2 } from 'lucide-react';
 
 interface TutorialControlsProps {
@@ -67,43 +66,43 @@ export default function TutorialControls({
 
   if (!song) {
     return (
-      <Card className="p-4">
-        <div className="text-center text-gray-500">
+      <div className="bg-black/50 backdrop-blur-md rounded-xl border border-gray-800 p-6">
+        <div className="text-center text-gray-400">
           Selecciona una canción para comenzar el tutorial
         </div>
-      </Card>
+      </div>
     );
   }
 
   // Pantalla de felicitación al completar la canción
   if (isCompleted) {
     return (
-      <Card className="p-6">
+      <div className="bg-black/50 backdrop-blur-md rounded-xl border border-gray-800 p-6">
         <div className="text-center space-y-4">
           {/* Mensaje de felicitación */}
           <div className="space-y-2">
             <div className="text-4xl">🎉</div>
-            <h2 className="text-2xl font-bold text-green-600">¡Muy Bien!</h2>
-            <p className="text-lg text-gray-700">
+            <h2 className="text-2xl font-bold text-green-400">¡Muy Bien!</h2>
+            <p className="text-lg text-gray-300">
               Has completado "{song.title}" exitosamente
             </p>
           </div>
 
           {/* Estadísticas finales */}
           {progress && (
-            <div className="bg-green-50 rounded-lg p-4 space-y-2">
+            <div className="bg-green-900/30 backdrop-blur-sm rounded-xl border border-green-700 p-4 space-y-2">
               <div className="grid grid-cols-2 gap-4">
                 <div className="text-center">
-                  <div className="text-xl font-bold text-green-600">
+                  <div className="text-xl font-bold text-green-400">
                     {progress.completedNotes}/{progress.totalNotes}
                   </div>
-                  <div className="text-sm text-gray-600">Notas completadas</div>
+                  <div className="text-sm text-gray-400">Notas completadas</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-xl font-bold text-green-600">
+                  <div className="text-xl font-bold text-green-400">
                     {progress.accuracy.toFixed(0)}%
                   </div>
-                  <div className="text-sm text-gray-600">Precisión final</div>
+                  <div className="text-sm text-gray-400">Precisión final</div>
                 </div>
               </div>
             </div>
@@ -123,7 +122,7 @@ export default function TutorialControls({
               <Button
                 onClick={onGoHome}
                 variant="outline"
-                className="flex-1"
+                className="flex-1 border-gray-600 text-gray-200 hover:bg-gray-800"
               >
                 🏠 Volver al Inicio
               </Button>
@@ -132,45 +131,45 @@ export default function TutorialControls({
               <Button
                 onClick={onViewOtherSongs}
                 variant="outline"
-                className="flex-1"
+                className="flex-1 border-gray-600 text-gray-200 hover:bg-gray-800"
               >
                 🎵 Ver Otras Canciones
               </Button>
             )}
           </div>
         </div>
-      </Card>
+      </div>
     );
   }
 
   return (
-    <Card className="p-4 space-y-4">
+    <div className="bg-black/50 backdrop-blur-md rounded-xl border border-gray-800 p-4 space-y-4">
       {/* Song Info */}
       <div className="text-center">
-        <h3 className="font-semibold text-lg">{song.title}</h3>
-        <p className="text-gray-600">{song.artist}</p>
+        <h3 className="font-semibold text-lg text-white">{song.title}</h3>
+        <p className="text-gray-400">{song.artist}</p>
       </div>
 
       {/* Progress Stats */}
       {progress && (
-        <div className="grid grid-cols-3 gap-4 py-3 bg-gray-50 rounded-lg">
+        <div className="grid grid-cols-3 gap-4 py-3 bg-gray-900/50 backdrop-blur-sm rounded-xl">
           <div className="text-center">
-            <div className="text-lg font-semibold text-blue-600">
+            <div className="text-lg font-semibold text-blue-400">
               {progress.completedNotes}/{progress.totalNotes}
             </div>
-            <div className="text-xs text-gray-600">Progreso</div>
+            <div className="text-xs text-gray-400">Progreso</div>
           </div>
           <div className="text-center">
-            <div className="text-lg font-semibold text-green-600">
+            <div className="text-lg font-semibold text-green-400">
               {progress.accuracy.toFixed(0)}%
             </div>
-            <div className="text-xs text-gray-600">Precisión</div>
+            <div className="text-xs text-gray-400">Precisión</div>
           </div>
           <div className="text-center">
-            <div className="text-lg font-semibold text-purple-600">
+            <div className="text-lg font-semibold text-purple-400">
               {progress.bestScore.toFixed(0)}%
             </div>
-            <div className="text-xs text-gray-600">Mejor puntaje</div>
+            <div className="text-xs text-gray-400">Mejor puntaje</div>
           </div>
         </div>
       )}
@@ -180,14 +179,14 @@ export default function TutorialControls({
         {tutorialState.isPlaying ? (
           <Button
             onClick={onPause}
-            className="p-3"
+            className="p-3 bg-orange-600 hover:bg-orange-700"
           >
             <Pause className="w-5 h-5" />
           </Button>
         ) : (
           <Button
             onClick={onPlay}
-            className="p-3"
+            className="p-3 bg-green-600 hover:bg-green-700"
           >
             <Play className="w-5 h-5" />
           </Button>
@@ -197,7 +196,7 @@ export default function TutorialControls({
           onClick={onStop}
           variant="outline"
           size="sm"
-          className="p-2"
+          className="p-2 border-gray-600 text-gray-200 hover:bg-gray-800"
         >
           <Square className="w-4 h-4" />
         </Button>
@@ -205,8 +204,8 @@ export default function TutorialControls({
 
       {/* Speed Control */}
       <div className="flex items-center justify-center gap-2">
-        <Volume2 className="w-4 h-4 text-gray-500" />
-        <span className="text-sm text-gray-600">Velocidad:</span>
+        <Volume2 className="w-4 h-4 text-gray-400" />
+        <span className="text-sm text-gray-400">Velocidad:</span>
         <div className="flex gap-1">
           {speedOptions.map(speed => (
             <Button
@@ -214,13 +213,17 @@ export default function TutorialControls({
               onClick={() => onSpeedChange(speed)}
               variant={tutorialState.playbackSpeed === speed ? "default" : "outline"}
               size="sm"
-              className="px-2 py-1 text-xs"
+              className={`px-2 py-1 text-xs ${
+                tutorialState.playbackSpeed === speed 
+                  ? "bg-blue-600 hover:bg-blue-700" 
+                  : "border-gray-600 text-gray-300 hover:bg-gray-800"
+              }`}
             >
               {speed}x
             </Button>
           ))}
         </div>
       </div>
-    </Card>
+    </div>
   );
 }

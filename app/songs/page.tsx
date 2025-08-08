@@ -172,27 +172,27 @@ export default function SongsPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900">
       <div className="container mx-auto px-4 py-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-4">
             <Link href="/">
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" className="border-gray-600 text-gray-200 hover:bg-gray-800">
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Volver al Piano
               </Button>
             </Link>
             <div className="flex items-center gap-2">
-              <Music className="w-6 h-6 text-blue-600" />
-              <h1 className="text-2xl font-bold text-gray-900">
+              <Music className="w-6 h-6 text-blue-400" />
+              <h1 className="text-2xl font-bold text-white">
                 {showTutorial ? 'Tutorial de Canción' : 'Biblioteca de Canciones'}
               </h1>
             </div>
           </div>
 
           {showTutorial && (
-            <Button onClick={handleBackToLibrary} variant="outline">
+            <Button onClick={handleBackToLibrary} variant="outline" className="border-gray-600 text-gray-200 hover:bg-gray-800">
               <BookOpen className="w-4 h-4 mr-2" />
               Ver Biblioteca
             </Button>
@@ -226,12 +226,12 @@ export default function SongsPage() {
               />
 
               {/* Instructions */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <h3 className="font-semibold text-blue-900 mb-2">
+              <div className="bg-blue-900/30 backdrop-blur-sm border border-blue-700 rounded-xl p-4">
+                <h3 className="font-semibold text-blue-300 mb-2">
                   ¿Cómo usar el tutorial?
                 </h3>
-                <ul className="text-blue-800 text-sm space-y-1">
-                  <li>• La tecla se iluminará en <span className="text-blue-600 font-semibold">azul</span> cuando debas tocarla</li>
+                <ul className="text-blue-200 text-sm space-y-1">
+                  <li>• La tecla se iluminará en <span className="text-blue-400 font-semibold">azul</span> cuando debas tocarla</li>
                   <li>• Toca solo la tecla resaltada en azul para avanzar</li>
                   <li>• Puedes usar las teclas del piano o tu teclado físico</li>
                   <li>• Tu progreso se mostrará en las estadísticas de arriba</li>

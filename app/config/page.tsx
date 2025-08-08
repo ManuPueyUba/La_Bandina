@@ -330,121 +330,93 @@ export default function ConfigPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 p-4">
-      <div className="max-w-6xl mx-auto space-y-6">
-        {/* Header */}
-        <Card>
-          <CardHeader>
+    <div className="min-h-screen bg-gray-900 text-white">
+      {/* Header minimalista */}
+      <div className="bg-gray-800/50 backdrop-blur-sm border-b border-gray-700 sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-4 py-3">
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Link href="/">
-                <Button variant="outline" size="sm">
-                  <ArrowLeft className="w-4 h-4 mr-2" />
-                  Volver al Piano
-                </Button>
+                <button className="flex items-center gap-2 text-gray-300 hover:text-white transition-colors">
+                  <ArrowLeft className="w-4 h-4" />
+                  <span className="text-sm">Piano</span>
+                </button>
               </Link>
-              <CardTitle className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-                <Keyboard className="inline w-8 h-8 mr-2" />
-                Configuración de Teclas
-              </CardTitle>
+              <h1 className="text-xl font-medium">Configuración de Teclas</h1>
             </div>
-          </CardHeader>
-        </Card>
-
-        {/* Instrucciones */}
-        <Card>
-          <CardContent className="p-6">
-            <h3 className="font-semibold mb-3">🎹 Instrucciones:</h3>
-            <ul className="space-y-2 text-sm text-gray-600">
-              <li>• <strong>Haz clic en una tecla del piano</strong> para asignarle una tecla del teclado físico</li>
-              <li>• <strong>Presiona cualquier tecla</strong> de tu teclado para asignarla</li>
-              <li>• <strong>Teclas verdes</strong> ya tienen asignación - haz clic en la "×" para eliminar</li>
-              <li>• <strong>Presiona Escape</strong> para cancelar la asignación</li>
-              <li>• <strong>Guarda tu configuración</strong> cuando termines</li>
-            </ul>
-          </CardContent>
-        </Card>
-
-        {/* Controles principales */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Button onClick={saveConfiguration} className="h-full">
-            <Save className="w-4 h-4 mr-2" />
-            Guardar Configuración
-          </Button>
-
-          <Button onClick={resetToDefault} variant="outline" className="h-full">
-            <RotateCcw className="w-4 h-4 mr-2" />
-            Resetear a Defecto
-          </Button>
+            
+            <div className="flex items-center gap-2">
+              <button
+                onClick={resetToDefault}
+                className="flex items-center gap-2 px-3 py-1.5 text-sm bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
+              >
+                <RotateCcw className="w-4 h-4" />
+                Reset
+              </button>
+              <button
+                onClick={saveConfiguration}
+                className="flex items-center gap-2 px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-500 rounded-lg transition-colors"
+              >
+                <Save className="w-4 h-4" />
+                Guardar
+              </button>
+            </div>
+          </div>
         </div>
-
-        {/* Estado actual */}
-        {isListening && selectedPianoKey && (
-          <Card className="border-2 border-blue-500 bg-blue-50">
-            <CardContent className="p-6 text-center">
-              <h3 className="text-lg font-semibold mb-2">
-                🎯 Presiona una tecla para asignar a: <strong>{selectedPianoKey.note}</strong> (Octava +{selectedPianoKey.octaveOffset})
-              </h3>
-              <p className="text-sm text-gray-600 mb-4">
-                Presiona <kbd className="bg-gray-200 px-2 py-1 rounded">Escape</kbd> para cancelar
-              </p>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Piano de configuración */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              🎹 Piano de Configuración
-              <span className="text-sm font-normal text-gray-500">
-                - Haz clic en las teclas para asignar
-              </span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-6">
-            {renderConfigKeyboard()}
-          </CardContent>
-        </Card>
-
-        {/* Resumen de asignaciones */}
-        <Card>
-          <CardHeader>
-            <CardTitle>📋 Resumen de Asignaciones</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2 text-sm">
-              {Object.entries(keyMapping)
-                .sort((a, b) => {
-                  const aOffset = a[1].octaveOffset
-                  const bOffset = b[1].octaveOffset
-                  if (aOffset !== bOffset) return aOffset - bOffset
-                  return CHROMATIC_NOTES.indexOf(a[1].note) - CHROMATIC_NOTES.indexOf(b[1].note)
-                })
-                .map(([key, mapping]) => (
-                  <div 
-                    key={key} 
-                    className="flex items-center justify-between bg-gray-100 rounded px-2 py-1"
-                  >
-                    <span className="font-mono font-bold">{key.toUpperCase()}</span>
-                    <span className="text-gray-600">
-                      {mapping.note} <span className="text-xs">+{mapping.octaveOffset}</span>
-                    </span>
-                  </div>
-                ))}
-            </div>
-            {Object.keys(keyMapping).length === 0 && (
-              <p className="text-gray-500 text-center py-4">
-                No hay teclas asignadas. Haz clic en las teclas del piano para comenzar.
-              </p>
-            )}
-          </CardContent>
-        </Card>
       </div>
 
-      {/* Toast */}
+      <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
+        {/* Piano de configuración */}
+        <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl border border-gray-700 p-6">
+          <h2 className="text-lg font-medium mb-4">Asignar Teclas del Teclado</h2>
+          <p className="text-sm text-gray-400 mb-6">
+            Haz clic en una tecla del piano y luego presiona la tecla del teclado que quieres asignar
+          </p>
+          
+          {/* Renderizar teclado aquí - actualizaré el renderConfigKeyboard también */}
+          {renderConfigKeyboard()}
+        </div>
+
+        {/* Instrucciones */}
+        <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl border border-gray-700 p-6">
+          <h3 className="text-lg font-medium mb-4">Instrucciones</h3>
+          <div className="grid md:grid-cols-2 gap-4 text-sm text-gray-300">
+            <div>
+              <h4 className="text-white font-medium mb-2">Asignar teclas:</h4>
+              <ul className="space-y-1 list-disc list-inside">
+                <li>Haz clic en una tecla del piano</li>
+                <li>Presiona la tecla del teclado deseada</li>
+                <li>La asignación se guarda automáticamente</li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="text-white font-medium mb-2">Controles:</h4>
+              <ul className="space-y-1 list-disc list-inside">
+                <li><span className="font-mono">Escape</span> - Cancelar asignación</li>
+                <li><span className="font-mono">Reset</span> - Volver a configuración por defecto</li>
+                <li><span className="font-mono">Guardar</span> - Guardar y volver al piano</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        {/* Estado actual - si se está escuchando */}
+        {isListening && selectedPianoKey && (
+          <div className="bg-blue-900/30 backdrop-blur-sm rounded-xl border border-blue-700 p-6 text-center">
+            <h3 className="text-lg font-medium mb-2">
+              🎯 Presiona una tecla para asignar a: <strong>{selectedPianoKey.note}</strong> (Octava +{selectedPianoKey.octaveOffset})
+            </h3>
+            <p className="text-sm text-gray-400">
+              Presiona <kbd className="bg-gray-700 px-2 py-1 rounded text-white">Escape</kbd> para cancelar
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Toast notifications */}
       {toast && (
-        <Toast
-          message={toast.message}
+        <Toast 
+          message={toast.message} 
           type={toast.type}
           onClose={() => setToast(null)}
         />

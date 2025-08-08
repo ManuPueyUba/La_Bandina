@@ -4,7 +4,6 @@ import { useState, useMemo } from 'react';
 import { Song } from '@/types/song';
 import { sampleSongs, songCategories, difficultyLevels } from '@/data/songs';
 import { useSongsFromBackend } from '@/hooks/useSongsFromBackend';
-import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search, Play, Star, Clock, BarChart3, Upload, Music, RefreshCw, AlertCircle } from 'lucide-react';
@@ -69,20 +68,22 @@ export default function SongLibrary({
 
   return (
     <div className="space-y-6">
-      {/* Header with Import Button and Backend Status */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Biblioteca de Canciones</h2>
-          <div className="flex items-center gap-4">
-            <p className="text-gray-600">
+      {/* Header with stats and actions */}
+      <div className="bg-black/50 backdrop-blur-md rounded-xl border border-gray-800 p-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h2 className="text-xl font-semibold text-white mb-2">
+              Biblioteca Musical 🎵
+            </h2>
+            <p className="text-gray-400 text-sm">
               {allSongs.length} canciones disponibles
               {customSongs.length > 0 && (
-                <span className="ml-2 text-blue-600">
+                <span className="ml-2 text-blue-400">
                   ({customSongs.length} importadas)
                 </span>
               )}
               {backendSongs.length > 0 && (
-                <span className="ml-2 text-green-600">
+                <span className="ml-2 text-green-400">
                   ({backendSongs.length} del servidor)
                 </span>
               )}
@@ -90,61 +91,61 @@ export default function SongLibrary({
             
             {/* Estado del backend */}
             {loading && (
-              <div className="flex items-center text-blue-600 text-sm">
+              <div className="flex items-center text-blue-400 text-sm mt-1">
                 <RefreshCw className="w-4 h-4 animate-spin mr-1" />
                 Cargando del servidor...
               </div>
             )}
             
             {error && (
-              <div className="flex items-center text-amber-600 text-sm">
+              <div className="flex items-center text-amber-400 text-sm mt-1">
                 <AlertCircle className="w-4 h-4 mr-1" />
                 Modo offline (usando canciones locales)
               </div>
             )}
             
             {!loading && !error && backendSongs.length > 0 && (
-              <div className="flex items-center text-green-600 text-sm">
+              <div className="flex items-center text-green-400 text-sm mt-1">
                 <Music className="w-4 h-4 mr-1" />
                 Conectado al servidor
               </div>
             )}
           </div>
-        </div>
         
-        <div className="flex gap-2">
-          {/* Botón para recargar desde backend */}
-          <Button 
-            onClick={refetch}
-            variant="outline"
-            size="sm"
-            disabled={loading}
-            className="flex items-center gap-2"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            Recargar
-          </Button>
-          
-          {onAddCustomSongs && (
+          <div className="flex gap-2">
+            {/* Botón para recargar desde backend */}
             <Button 
-              onClick={() => setShowMidiImport(true)}
-              className="flex items-center gap-2"
+              onClick={refetch}
+              variant="outline"
+              size="sm"
+              disabled={loading}
+              className="flex items-center gap-2 border-gray-600 text-gray-200 hover:bg-gray-800"
             >
-              <Upload className="w-4 h-4" />
-              Importar MIDI
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              Recargar
             </Button>
-          )}
+          
+            {onAddCustomSongs && (
+              <Button 
+                onClick={() => setShowMidiImport(true)}
+                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
+              >
+                <Upload className="w-4 h-4" />
+                Importar MIDI
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 
       {/* Search and Filters */}
-      <div className="space-y-4">
+      <div className="bg-black/50 backdrop-blur-md rounded-xl border border-gray-800 p-6 space-y-4">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
           <input
             type="text"
             placeholder="Buscar canciones..."
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full pl-10 pr-4 py-2 bg-gray-900 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-white placeholder-gray-400"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -152,16 +153,16 @@ export default function SongLibrary({
 
         <div className="flex gap-4">
           <div className="flex-1">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-300 mb-1">
               Categoría
             </label>
             <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-              <SelectTrigger>
+              <SelectTrigger className="bg-gray-900 border-gray-600 text-white">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-gray-900 border-gray-600">
                 {songCategories.map(category => (
-                  <SelectItem key={category} value={category}>
+                  <SelectItem key={category} value={category} className="text-white hover:bg-gray-800">
                     {category}
                   </SelectItem>
                 ))}
@@ -170,17 +171,17 @@ export default function SongLibrary({
           </div>
 
           <div className="flex-1">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-300 mb-1">
               Dificultad
             </label>
             <Select value={selectedDifficulty} onValueChange={setSelectedDifficulty}>
-              <SelectTrigger>
+              <SelectTrigger className="bg-gray-900 border-gray-600 text-white">
                 <SelectValue placeholder="Todas" />
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas</SelectItem>
+              <SelectContent className="bg-gray-900 border-gray-600">
+                <SelectItem value="all" className="text-white hover:bg-gray-800">Todas</SelectItem>
                 {difficultyLevels.map(level => (
-                  <SelectItem key={level.value} value={level.value}>
+                  <SelectItem key={level.value} value={level.value} className="text-white hover:bg-gray-800">
                     {level.label}
                   </SelectItem>
                 ))}
@@ -197,21 +198,21 @@ export default function SongLibrary({
           const isFavorite = favorites.includes(song.id);
 
           return (
-            <Card key={song.id} className="p-4 hover:shadow-md transition-shadow">
+            <div key={song.id} className="bg-black/50 backdrop-blur-md rounded-xl border border-gray-800 p-4 hover:border-gray-600 transition-all">
               <div className="space-y-3">
                 {/* Header */}
                 <div className="flex items-start justify-between">
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-gray-900 truncate">
+                    <h3 className="font-semibold text-white truncate">
                       {song.title}
                     </h3>
-                    <p className="text-sm text-gray-600 truncate">
+                    <p className="text-sm text-gray-400 truncate">
                       {song.artist}
                     </p>
                     {customSongs.includes(song) && (
                       <div className="flex items-center gap-1 mt-1">
-                        <Music className="w-3 h-3 text-blue-500" />
-                        <span className="text-xs text-blue-500">Importada</span>
+                        <Music className="w-3 h-3 text-blue-400" />
+                        <span className="text-xs text-blue-400">Importada</span>
                       </div>
                     )}
                   </div>
@@ -219,8 +220,8 @@ export default function SongLibrary({
                     onClick={() => onToggleFavorite(song.id)}
                     className={`ml-2 p-1 rounded-full transition-colors ${
                       isFavorite 
-                        ? 'text-yellow-500 hover:text-yellow-600' 
-                        : 'text-gray-400 hover:text-yellow-500'
+                        ? 'text-yellow-400 hover:text-yellow-300' 
+                        : 'text-gray-500 hover:text-yellow-400'
                     }`}
                   >
                     <Star className={`w-4 h-4 ${isFavorite ? 'fill-current' : ''}`} />
@@ -230,15 +231,15 @@ export default function SongLibrary({
                 {/* Info */}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-sm">
-                    <span className={`font-medium ${difficultyInfo.color}`}>
+                    <span className={`font-medium ${difficultyInfo.color.replace('text-', 'text-').replace('-600', '-400')}`}>
                       {difficultyInfo.label}
                     </span>
-                    <span className="text-gray-500">
+                    <span className="text-gray-400">
                       {song.category}
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-4 text-xs text-gray-500">
+                  <div className="flex items-center gap-4 text-xs text-gray-400">
                     <div className="flex items-center gap-1">
                       <Clock className="w-3 h-3" />
                       {formatDuration(song.duration)}
@@ -250,7 +251,7 @@ export default function SongLibrary({
                   </div>
 
                   {song.description && (
-                    <p className="text-xs text-gray-600 line-clamp-2">
+                    <p className="text-xs text-gray-400 line-clamp-2">
                       {song.description}
                     </p>
                   )}
@@ -259,33 +260,33 @@ export default function SongLibrary({
                 {/* Actions */}
                 <Button
                   onClick={() => onSelectSong(song)}
-                  className="w-full"
+                  className="w-full bg-green-600 hover:bg-green-700"
                   size="sm"
                 >
                   <Play className="w-4 h-4 mr-2" />
                   Comenzar Tutorial
                 </Button>
               </div>
-            </Card>
+            </div>
           );
         })}
       </div>
 
       {filteredSongs.length === 0 && (
-        <div className="text-center py-12">
-          <p className="text-gray-500">
+        <div className="text-center py-12 bg-black/30 backdrop-blur-md rounded-xl border border-gray-800">
+          <p className="text-gray-400">
             No se encontraron canciones que coincidan con los filtros.
           </p>
           {searchTerm === '' && selectedCategory === 'Todas' && selectedDifficulty === 'all' && allSongs.length === 0 && (
             <div className="mt-4">
-              <p className="text-gray-400 mb-4">
+              <p className="text-gray-500 mb-4">
                 ¡Comienza importando archivos MIDI para expandir tu biblioteca!
               </p>
               {onAddCustomSongs && (
                 <Button 
                   onClick={() => setShowMidiImport(true)}
                   variant="outline"
-                  className="flex items-center gap-2"
+                  className="flex items-center gap-2 border-gray-600 text-gray-200 hover:bg-gray-800"
                 >
                   <Upload className="w-4 h-4" />
                   Importar MIDI

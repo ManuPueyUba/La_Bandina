@@ -355,7 +355,7 @@ export default function TutorialPiano({ highlightedKeys, onKeyPress, onKeyReleas
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-lg p-4">
+    <div className="bg-black/50 backdrop-blur-md rounded-xl border border-gray-800 p-6">
       <div className="flex justify-center mb-4">
         <div className="max-w-full overflow-x-auto">
           {renderKeyboard()}
@@ -363,35 +363,35 @@ export default function TutorialPiano({ highlightedKeys, onKeyPress, onKeyReleas
       </div>
       
       {highlightedKeys.size > 0 && (
-        <div className="text-center text-sm text-blue-600">
+        <div className="text-center text-sm text-blue-400">
           <p>🎹 Las teclas azules indican las notas de la canción</p>
         </div>
       )}
       
       {!audioInitialized && (
-        <div className="text-center text-sm text-gray-500 mt-2">
+        <div className="text-center text-sm text-gray-400 mt-2">
           <p>Haz clic en cualquier tecla para activar el audio</p>
         </div>
       )}
 
       {/* Guía de teclas del teclado */}
-      <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-        <div className="text-center text-sm text-gray-700 mb-2">
+      <div className="mt-4 p-4 bg-gray-900/50 backdrop-blur-sm rounded-xl border border-gray-700">
+        <div className="text-center text-sm text-gray-200 mb-2">
           <strong>🎼 Guía del Teclado</strong>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs text-gray-600">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs text-gray-400">
           <div>
-            <p className="font-semibold mb-1">Octava Base (4):</p>
+            <p className="font-semibold mb-1 text-gray-300">Octava Base (4):</p>
             <p>A=C, W=C#, S=D, E=D#, D=E, F=F</p>
             <p>T=F#, G=G, Y=G#, H=A, U=A#, J=B</p>
           </div>
           <div>
-            <p className="font-semibold mb-1">Octava Superior (5):</p>
+            <p className="font-semibold mb-1 text-gray-300">Octava Superior (5):</p>
             <p>K=C, O=C#, L=D, P=D#, ;=E, Z=F</p>
             <p>X=G, C=A, V=B</p>
           </div>
           <div>
-            <p className="font-semibold mb-1">Octava Alta (6):</p>
+            <p className="font-semibold mb-1 text-gray-300">Octava Alta (6):</p>
             <p>B=C, N=D, M=E, ,=F, .=G, /=A</p>
           </div>
         </div>
