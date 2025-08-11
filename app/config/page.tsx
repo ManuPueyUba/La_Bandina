@@ -5,8 +5,10 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ArrowLeft, Keyboard, RotateCcw, Save, Check, X } from "lucide-react"
+import { ArrowLeft, Keyboard, RotateCcw, Save, Check, X, Cloud, CloudOff } from "lucide-react"
 import Link from "next/link"
+import { useAuth } from "@/contexts/AuthContext"
+import { KeyMappingApiClient, KeyMappingData } from "@/lib/api"
 
 // Componente Toast
 interface ToastProps {
@@ -93,34 +95,76 @@ const CHROMATIC_NOTES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "
 
 export default function ConfigPage() {
   const router = useRouter()
+  const { user, isAuthenticated } = useAuth()
   const [keyMapping, setKeyMapping] = useState<KeyMapping>(DEFAULT_KEY_MAPPING)
   const [selectedPianoKey, setSelectedPianoKey] = useState<{note: string, octaveOffset: number} | null>(null)
   const [isListening, setIsListening] = useState(false)
   const [currentOctave, setCurrentOctave] = useState(4)
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null)
+  const [isSaving, setIsSaving] = useState(false)
   const numberOfOctaves = 3 // Fijo en 3 octavas
 
   // Cargar configuración guardada al montar el componente
   useEffect(() => {
-    const savedMapping = localStorage.getItem("pianoKeyMapping")
-    if (savedMapping) {
-      try {
-        setKeyMapping(JSON.parse(savedMapping))
-      } catch (error) {
-        console.error("Error loading saved key mapping:", error)
+    const loadConfiguration = async () => {
+      // Si el usuario está autenticado, intentar cargar desde la base de datos
+      if (isAuthenticated && user) {
+        try {
+          const serverConfig = await KeyMappingApiClient.getDefaultKeyMapping()
+          if (serverConfig?.mapping_data) {
+            setKeyMapping(serverConfig.mapping_data)
+            return // Si se carga del servidor, no cargar del localStorage
+          }
+        } catch (error) {
+          console.log("No server configuration found, trying localStorage")
+        }
+      }
+
+      // Fallback a localStorage
+      const savedMapping = localStorage.getItem("pianoKeyMapping")
+      if (savedMapping) {
+        try {
+          setKeyMapping(JSON.parse(savedMapping))
+        } catch (error) {
+          console.error("Error loading saved key mapping:", error)
+        }
       }
     }
-  }, [])
+
+    loadConfiguration()
+  }, [isAuthenticated, user])
 
   // Guardar configuración
-  const saveConfiguration = () => {
-    localStorage.setItem("pianoKeyMapping", JSON.stringify(keyMapping))
-    setToast({ message: "¡Configuración guardada exitosamente!", type: "success" })
+  const saveConfiguration = async () => {
+    setIsSaving(true)
     
-    // Navegar después de mostrar el toast
-    setTimeout(() => {
-      router.push("/")
-    }, 500) // Dar tiempo para ver el toast
+    try {
+      if (isAuthenticated && user) {
+        // Guardar en la base de datos
+        await KeyMappingApiClient.saveDefaultKeyMapping(keyMapping as KeyMappingData)
+        setToast({ message: "¡Configuración guardada en la nube exitosamente!", type: "success" })
+      } else {
+        // Guardar solo en localStorage
+        localStorage.setItem("pianoKeyMapping", JSON.stringify(keyMapping))
+        setToast({ message: "¡Configuración guardada localmente!", type: "success" })
+      }
+      
+      // Navegar después de mostrar el toast
+      setTimeout(() => {
+        router.push("/")
+      }, 1000) // Dar tiempo para ver el toast
+    } catch (error) {
+      console.error("Error saving configuration:", error)
+      // Fallback a localStorage si falla el servidor
+      localStorage.setItem("pianoKeyMapping", JSON.stringify(keyMapping))
+      setToast({ message: "Error al guardar en la nube, guardado localmente", type: "error" })
+      
+      setTimeout(() => {
+        router.push("/")
+      }, 1000)
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   // Resetear a configuración por defecto
@@ -342,7 +386,20 @@ export default function ConfigPage() {
                   <span className="text-sm">Piano</span>
                 </button>
               </Link>
-              <h1 className="text-xl font-medium">Configuración de Teclas</h1>
+              <div className="flex items-center gap-3">
+                <h1 className="text-xl font-medium">Configuración de Teclas</h1>
+                {isAuthenticated ? (
+                  <div className="flex items-center gap-1 px-2 py-1 bg-blue-600/20 text-blue-400 text-xs rounded-lg">
+                    <Cloud className="w-3 h-3" />
+                    <span>Nube</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1 px-2 py-1 bg-gray-600/50 text-gray-400 text-xs rounded-lg">
+                    <CloudOff className="w-3 h-3" />
+                    <span>Local</span>
+                  </div>
+                )}
+              </div>
             </div>
             
             <div className="flex items-center gap-2">
@@ -355,10 +412,25 @@ export default function ConfigPage() {
               </button>
               <button
                 onClick={saveConfiguration}
-                className="flex items-center gap-2 px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-500 rounded-lg transition-colors"
+                disabled={isSaving}
+                className="flex items-center gap-2 px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
               >
-                <Save className="w-4 h-4" />
-                Guardar
+                {isSaving ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Guardando...
+                  </>
+                ) : isAuthenticated ? (
+                  <>
+                    <Cloud className="w-4 h-4" />
+                    Guardar en Nube
+                  </>
+                ) : (
+                  <>
+                    <CloudOff className="w-4 h-4" />
+                    Guardar Local
+                  </>
+                )}
               </button>
             </div>
           </div>

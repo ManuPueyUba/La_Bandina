@@ -22,6 +22,14 @@ export const API_ENDPOINTS = {
     upload: `${API_V1}/midi/upload`,
     convert: (id: string) => `${API_V1}/midi/${id}/convert`,
   },
+  keyMappings: {
+    saveDefault: `${API_V1}/key-mappings/save-default`,
+    getDefault: `${API_V1}/key-mappings/default`,
+    getAll: `${API_V1}/key-mappings`,
+    create: `${API_V1}/key-mappings`,
+    update: (id: string) => `${API_V1}/key-mappings/${id}`,
+    delete: (id: string) => `${API_V1}/key-mappings/${id}`,
+  },
   health: `${API_BASE_URL}/health`,
 }
 
@@ -239,6 +247,89 @@ export interface MidiConversionResponse {
     notes_count: number
     total_duration: number
     conversion_type: string
+  }
+}
+
+// Key Mapping types
+export interface KeyMappingData {
+  [key: string]: {
+    note: string
+    octaveOffset: number
+  }
+}
+
+export interface KeyMappingResponse {
+  id: number
+  name: string
+  mapping_data: KeyMappingData
+  user_id: number
+}
+
+export interface KeyMappingCreate {
+  name: string
+  mapping_data: KeyMappingData
+}
+
+// Add Key Mapping methods to ApiClient
+export class KeyMappingApiClient {
+  private static getAuthHeaders(): HeadersInit {
+    const token = localStorage.getItem('authToken')
+    return token ? { 'Authorization': `Bearer ${token}` } : {}
+  }
+
+  static async saveDefaultKeyMapping(mappingData: KeyMappingData): Promise<KeyMappingResponse> {
+    const response = await fetch(API_ENDPOINTS.keyMappings.saveDefault, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...this.getAuthHeaders(),
+      },
+      body: JSON.stringify(mappingData),
+    })
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ detail: 'Unknown error' }))
+      throw new Error(error.detail || `HTTP error! status: ${response.status}`)
+    }
+
+    return response.json()
+  }
+
+  static async getDefaultKeyMapping(): Promise<KeyMappingResponse> {
+    const response = await fetch(API_ENDPOINTS.keyMappings.getDefault, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        ...this.getAuthHeaders(),
+      },
+    })
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        throw new Error('No default key mapping found')
+      }
+      const error = await response.json().catch(() => ({ detail: 'Unknown error' }))
+      throw new Error(error.detail || `HTTP error! status: ${response.status}`)
+    }
+
+    return response.json()
+  }
+
+  static async getAllKeyMappings(): Promise<KeyMappingResponse[]> {
+    const response = await fetch(API_ENDPOINTS.keyMappings.getAll, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        ...this.getAuthHeaders(),
+      },
+    })
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ detail: 'Unknown error' }))
+      throw new Error(error.detail || `HTTP error! status: ${response.status}`)
+    }
+
+    return response.json()
   }
 }
 

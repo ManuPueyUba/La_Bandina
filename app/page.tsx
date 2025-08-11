@@ -9,7 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Play, Square, RotateCcw, Volume2, Settings, Music, Mic, Download, Save } from "lucide-react"
 import Link from "next/link"
 import { AuthButton } from "@/components/auth/AuthButton"
-import { ApiClient, CreateRecordingRequest, RecordingResponse } from "@/lib/api"
+import { ApiClient, CreateRecordingRequest, RecordingResponse, KeyMappingApiClient } from "@/lib/api"
+import { useAuth } from "@/contexts/AuthContext"
 
 // Tipos para las notas y escalas
 type Note = string
@@ -76,6 +77,7 @@ const SCALES = {
 }
 
 export default function VirtualPiano() {
+  const { user, isAuthenticated } = useAuth()
   const [synth, setSynth] = useState<Tone.PolySynth | null>(null)
   const [pressedKeys, setPressedKeys] = useState<Set<string>>(new Set())
   const [currentOctave, setCurrentOctave] = useState(4)
@@ -96,17 +98,35 @@ export default function VirtualPiano() {
 
   const pressedNotesRef = useRef<Map<string, number>>(new Map())
 
-  // Cargar configuración de teclas desde localStorage
+  // Cargar configuración de teclas desde el servidor o localStorage
   useEffect(() => {
-    const savedMapping = localStorage.getItem("pianoKeyMapping")
-    if (savedMapping) {
-      try {
-        setKeyMapping(JSON.parse(savedMapping))
-      } catch (error) {
-        console.error("Error loading saved key mapping:", error)
+    const loadKeyMapping = async () => {
+      // Si el usuario está autenticado, intentar cargar desde la base de datos
+      if (isAuthenticated && user) {
+        try {
+          const serverConfig = await KeyMappingApiClient.getDefaultKeyMapping()
+          if (serverConfig?.mapping_data) {
+            setKeyMapping(serverConfig.mapping_data)
+            return // Si se carga del servidor, no cargar del localStorage
+          }
+        } catch (error) {
+          console.log("No server configuration found, using localStorage fallback")
+        }
+      }
+
+      // Fallback a localStorage
+      const savedMapping = localStorage.getItem("pianoKeyMapping")
+      if (savedMapping) {
+        try {
+          setKeyMapping(JSON.parse(savedMapping))
+        } catch (error) {
+          console.error("Error loading saved key mapping:", error)
+        }
       }
     }
-  }, [])
+
+    loadKeyMapping()
+  }, [isAuthenticated, user])
 
   // Escuchar las teclas resaltadas del tutorial - versión simplificada
   useEffect(() => {
