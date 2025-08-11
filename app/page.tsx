@@ -6,12 +6,21 @@ import { Midi } from "@tonejs/midi"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Play, Square, RotateCcw, Volume2, Settings, Music, Mic, Download, Save } from "lucide-react"
+import { Play, Square, RotateCcw, Volume2, Settings, Music, Mic, Download, Save, Pause, Trash2 } from "lucide-react"
 import Link from "next/link"
 import { AuthButton } from "@/components/auth/AuthButton"
 import { ApiClient, CreateRecordingRequest, RecordingResponse, KeyMappingApiClient } from "@/lib/api"
 import { useAuth } from "@/contexts/AuthContext"
 import { WelcomeModal } from "@/components/ui/WelcomeModal"
+import { SaveRecordingModal } from "@/components/ui/SaveRecordingModal"
+import { 
+  saveRecording, 
+  getUserRecordings,
+  deleteRecording,
+  isUserLoggedIn, 
+  getUserToken, 
+  RecordedNote as APIRecordedNote 
+} from "@/lib/api/recordings"
 
 // Tipos para las notas y escalas
 type Note = string
@@ -97,6 +106,18 @@ export default function VirtualPiano() {
   const [recordings, setRecordings] = useState<Recording[]>([])
   const [recordingStartTime, setRecordingStartTime] = useState<number | null>(null)
   const [showWelcomeModal, setShowWelcomeModal] = useState(false)
+  const [showSaveModal, setShowSaveModal] = useState(false)
+  const [pendingRecording, setPendingRecording] = useState<{
+    notes: RecordedNote[]
+    duration: number
+  } | null>(null)
+  const [isSaving, setIsSaving] = useState(false)
+
+  // Estados para reproducción
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [currentlyPlayingRecording, setCurrentlyPlayingRecording] = useState<Recording | null>(null)
+  const [playbackPosition, setPlaybackPosition] = useState(0)
+  const [playbackTimeouts, setPlaybackTimeouts] = useState<NodeJS.Timeout[]>([])
 
   const pressedNotesRef = useRef<Map<string, number>>(new Map())
 
@@ -237,6 +258,15 @@ export default function VirtualPiano() {
     }
   }, [synth])
 
+  // Limpiar timeouts de reproducción al desmontar
+  useEffect(() => {
+    return () => {
+      playbackTimeouts.forEach(timeout => {
+        clearTimeout(timeout)
+      })
+    }
+  }, [playbackTimeouts])
+
   // Actualizar volumen
   useEffect(() => {
     if (synth) {
@@ -294,44 +324,37 @@ export default function VirtualPiano() {
   }, [])
 
   const stopRecording = useCallback(async () => {
+    console.log('=== STOP RECORDING DEBUG ===')
+    console.log('1. stopRecording called')
     setIsRecording(false)
+    
+    console.log('2. Current recording length:', currentRecording.length)
+    console.log('3. Recording start time:', recordingStartTime)
+    
     if (currentRecording.length > 0 && recordingStartTime) {
       const duration = Date.now() - recordingStartTime
+      console.log('4. Duration calculated:', duration)
       
-      try {
-        // Preparar datos para el backend
-        const recordingData: CreateRecordingRequest = {
-          title: `Grabación ${recordings.length + 1}`,
-          artist: "Usuario",
-          bpm: 120, // BPM por defecto
-          key_signature: "C major",
-          description: `Grabación realizada el ${new Date().toLocaleString()}`,
-          notes: currentRecording.map(note => ({
-            note: note.note,
-            octave: note.octave,
-            start_time: note.startTime,
-            end_time: note.endTime || note.startTime + 500, // Si no hay endTime, usar 500ms por defecto
-            velocity: note.velocity
-          }))
-        }
-
-        // Enviar al backend
-        const backendRecording = await ApiClient.createRecording(recordingData)
-        
-        // Crear recording local para la UI
-        const newRecording: Recording = {
-          id: backendRecording.id,
-          name: backendRecording.title,
+      // Si el usuario tiene sesión iniciada, mostrar modal para guardar
+      const userLoggedIn = isUserLoggedIn()
+      const token = getUserToken()
+      console.log('5. User logged in:', userLoggedIn)
+      console.log('5.1. Token exists:', !!token)
+      console.log('5.2. Token value:', token ? 'EXISTS' : 'NULL')
+      console.log('5.3. Window object:', typeof window)
+      console.log('5.4. LocalStorage test:', localStorage.getItem('token') ? 'HAS_TOKEN' : 'NO_TOKEN')
+      
+      if (userLoggedIn || true) { // TEMP: Siempre mostrar modal para debugging
+        console.log('6. Setting pending recording and showing modal')
+        setPendingRecording({
           notes: currentRecording,
-          duration,
-          createdAt: new Date()
-        }
-        
-        setRecordings(prev => [...prev, newRecording])
-        console.log('Grabación guardada en el backend:', backendRecording)
-      } catch (error) {
-        console.error('Error al guardar la grabación:', error)
-        // Fallback: guardar localmente si falla el backend
+          duration
+        })
+        setShowSaveModal(true)
+        console.log('7. Modal should be visible now')
+      } else {
+        // Si no tiene sesión, guardar localmente como antes
+        console.log('6. User not logged in, saving locally')
         const newRecording: Recording = {
           id: `recording-${Date.now()}`,
           name: `Grabación ${recordings.length + 1}`,
@@ -340,12 +363,195 @@ export default function VirtualPiano() {
           createdAt: new Date()
         }
         setRecordings(prev => [...prev, newRecording])
-        alert('No se pudo conectar con el servidor. La grabación se guardó localmente.')
+        console.log('7. Recording saved locally:', newRecording)
       }
+    } else {
+      console.log('4. No recording data or missing start time')
+      console.log('   - currentRecording.length:', currentRecording.length)
+      console.log('   - recordingStartTime:', recordingStartTime)
     }
+    
     setCurrentRecording([])
     setRecordingStartTime(null)
+    console.log('8. Cleanup completed')
+    console.log('=== END DEBUG ===')
   }, [currentRecording, recordingStartTime, recordings.length])
+
+  const handleSaveRecording = useCallback(async (recordingData: {
+    title: string
+    description: string
+    tempo: number
+    category: string
+  }) => {
+    if (!pendingRecording) return
+
+    setIsSaving(true)
+    
+    try {
+      const token = getUserToken()
+      console.log('=== SAVE RECORDING DEBUG ===')
+      console.log('1. Getting token...')
+      console.log('2. Token result:', token ? 'EXISTS' : 'NULL/UNDEFINED')
+      console.log('3. Token length:', token ? token.length : 'N/A')
+      console.log('4. Direct localStorage check:', localStorage.getItem('token') ? 'EXISTS' : 'NULL')
+      console.log('5. Window type:', typeof window)
+      
+      if (!token) {
+        console.log('6. ERROR: No token found')
+        console.log('7. TEMPORARY: Proceeding without backend save...')
+        
+        // TEMPORAL: Crear grabación local si no hay token
+        const newRecording: Recording = {
+          id: `recording-${Date.now()}`,
+          name: recordingData.title,
+          notes: pendingRecording.notes,
+          duration: pendingRecording.duration,
+          createdAt: new Date()
+        }
+        setRecordings(prev => [...prev, newRecording])
+        setPendingRecording(null)
+        console.log('8. Recording saved locally instead:', newRecording)
+        return
+        
+        // throw new Error('No se encontró token de autenticación')
+      }
+
+      // Preparar datos para el API
+      const apiRecordingData = {
+        title: recordingData.title,
+        description: recordingData.description,
+        notes: pendingRecording.notes.map(note => ({
+          note: note.note,
+          octave: note.octave,
+          start_time: note.startTime,  // Convertir camelCase a snake_case
+          end_time: note.endTime,      // Convertir camelCase a snake_case
+          velocity: note.velocity
+        })),
+        duration: pendingRecording.duration,
+        tempo: recordingData.tempo,
+        category: recordingData.category
+      }
+
+      console.log('7. API data prepared:', apiRecordingData)
+
+      // Guardar en el backend
+      const savedRecording = await saveRecording(apiRecordingData, token)
+      
+      // Crear recording local para la UI
+      const newRecording: Recording = {
+        id: savedRecording.id.toString(),
+        name: savedRecording.title,
+        notes: pendingRecording.notes,
+        duration: pendingRecording.duration,
+        createdAt: new Date(savedRecording.created_at)
+      }
+      
+      setRecordings(prev => [...prev, newRecording])
+      setPendingRecording(null)
+      console.log('Grabación guardada exitosamente:', savedRecording)
+      
+      // Opcionalmente, recargar todas las grabaciones para asegurar sincronización
+      // loadRecordings()
+      
+    } catch (error) {
+      console.error('Error al guardar la grabación:', error)
+      // Fallback: guardar localmente si falla el backend
+      const newRecording: Recording = {
+        id: `recording-${Date.now()}`,
+        name: recordingData.title,
+        notes: pendingRecording.notes,
+        duration: pendingRecording.duration,
+        createdAt: new Date()
+      }
+      setRecordings(prev => [...prev, newRecording])
+      setPendingRecording(null)
+      alert('Error al conectar con el servidor. La grabación se guardó localmente.')
+    } finally {
+      setIsSaving(false)
+    }
+  }, [pendingRecording, recordings.length])
+
+  // Función para cargar grabaciones del backend
+  const loadRecordings = useCallback(async () => {
+    if (!isUserLoggedIn()) return
+
+    try {
+      const token = getUserToken()
+      if (!token) return
+
+      console.log('Loading recordings from backend...')
+      const response = await getUserRecordings(token)
+      
+      // Convertir las grabaciones del backend al formato local
+      const backendRecordings: Recording[] = response.recordings.map((recording: any) => ({
+        id: recording.id.toString(),
+        name: recording.title,
+        notes: recording.notes.map((note: any) => ({
+          note: note.note,
+          octave: note.octave,
+          startTime: note.start_time, // Convertir snake_case a camelCase
+          endTime: note.end_time,     // Convertir snake_case a camelCase
+          velocity: note.velocity
+        })),
+        duration: recording.duration,
+        createdAt: new Date(recording.created_at)
+      }))
+      
+      setRecordings(backendRecordings)
+      console.log('Loaded recordings from backend:', backendRecordings.length)
+      
+    } catch (error) {
+      console.error('Error loading recordings:', error)
+      // No mostrar error al usuario ya que puede no estar loggeado
+    }
+  }, [])
+
+  // Cargar grabaciones al iniciar la aplicación
+  useEffect(() => {
+    loadRecordings()
+  }, [loadRecordings])
+
+  // Recargar grabaciones cuando cambia el estado de autenticación
+  useEffect(() => {
+    if (isAuthenticated) {
+      loadRecordings()
+    } else {
+      // Si el usuario cierra sesión, limpiar las grabaciones
+      setRecordings([])
+    }
+  }, [isAuthenticated, loadRecordings])
+
+  // Función para eliminar grabación
+  const handleDeleteRecording = useCallback(async (recordingId: string) => {
+    if (!isUserLoggedIn()) {
+      // Si no está loggeado, eliminar localmente
+      setRecordings(prev => prev.filter(r => r.id !== recordingId))
+      return
+    }
+
+    try {
+      const token = getUserToken()
+      if (!token) {
+        throw new Error('No se encontró token de autenticación')
+      }
+
+      // Confirmar eliminación
+      if (!confirm('¿Estás seguro de que quieres eliminar esta grabación?')) {
+        return
+      }
+
+      console.log('Deleting recording from backend:', recordingId)
+      await deleteRecording(parseInt(recordingId), token)
+      
+      // Eliminar de la lista local
+      setRecordings(prev => prev.filter(r => r.id !== recordingId))
+      console.log('Recording deleted successfully')
+      
+    } catch (error) {
+      console.error('Error deleting recording:', error)
+      alert('Error al eliminar la grabación. Inténtalo de nuevo.')
+    }
+  }, [])
 
   const exportToMidi = useCallback(async (recording: Recording) => {
     try {
@@ -427,6 +633,150 @@ export default function VirtualPiano() {
       alert('Error al convertir la grabación a tutorial')
     }
   }, [])
+
+    // Funciones de reproducción
+  const playRecording = useCallback(async (recording: Recording) => {
+    if (!synth) {
+      console.log('Synth not initialized')
+      return
+    }
+    
+    console.log('Starting playback of recording:', recording.name, 'Notes:', recording.notes.length)
+    
+    // Si ya se está reproduciendo esta grabación, no hacer nada
+    if (isPlaying && currentlyPlayingRecording?.id === recording.id) {
+      console.log('Already playing this recording')
+      return
+    }
+    
+    // Parar cualquier reproducción anterior
+    if (isPlaying) {
+      stopPlayback()
+      await new Promise(resolve => setTimeout(resolve, 100))
+    }
+
+    // Asegurar que el contexto de audio esté activo
+    if (Tone.context.state === 'suspended') {
+      console.log('Starting Tone.js context')
+      await Tone.start()
+    }
+
+    setCurrentlyPlayingRecording(recording)
+    setIsPlaying(true)
+    setPlaybackPosition(0)
+
+    const sortedNotes = [...recording.notes].sort((a, b) => a.startTime - b.startTime)
+    
+    if (sortedNotes.length === 0) {
+      console.log('No notes to play')
+      setIsPlaying(false)
+      return
+    }
+    
+    console.log('Playing notes:', sortedNotes)
+    
+    // Normalizar tiempos (empezar desde 0)
+    const startTime = sortedNotes[0].startTime
+    const normalizedNotes = sortedNotes.map(note => ({
+      ...note,
+      startTime: note.startTime - startTime,
+      endTime: note.endTime ? note.endTime - startTime : note.startTime + 200
+    }))
+    
+    console.log('Normalized notes:', normalizedNotes)
+    
+    let playbackTimeouts: NodeJS.Timeout[] = []
+    
+    // Función para reproducir las notas
+    const playNotes = () => {
+      normalizedNotes.forEach((note, index) => {
+        const timeoutId = setTimeout(async () => {
+          console.log(`Playing note ${index + 1}/${normalizedNotes.length}: ${note.note}${note.octave}`)
+          
+          const noteWithOctave = `${note.note}${note.octave}`
+          
+          try {
+            // Tocar la nota
+            synth.triggerAttack(noteWithOctave, undefined, (note.velocity || 0.7))
+            
+            // Programar el release de la nota
+            const noteDuration = note.endTime ? note.endTime - note.startTime : 200
+            const releaseTimeout = setTimeout(() => {
+              synth.triggerRelease(noteWithOctave)
+            }, Math.max(50, noteDuration))
+            
+            playbackTimeouts.push(releaseTimeout)
+            
+            setPlaybackPosition(index + 1)
+            
+            // Si es la última nota, programar el loop
+            if (index === normalizedNotes.length - 1) {
+              console.log('Last note played, scheduling loop restart')
+              const loopTimeout = setTimeout(() => {
+                console.log('Looping: restarting playback')
+                playRecording(recording)
+              }, Math.max(50, noteDuration) + 500) // 500ms de pausa entre loops
+              
+              playbackTimeouts.push(loopTimeout)
+            }
+          } catch (error) {
+            console.error('Error playing note:', error)
+          }
+        }, note.startTime)
+        
+        playbackTimeouts.push(timeoutId)
+      })
+    }
+    
+    // Ejecutar la reproducción
+    playNotes()
+    
+    // Guardar todos los timeouts para poder cancelarlos
+    setPlaybackTimeouts(playbackTimeouts)
+  }, [synth, isPlaying, currentlyPlayingRecording])
+
+  const pausePlayback = useCallback(() => {
+    console.log('Pausing playback')
+    setIsPlaying(false)
+    
+    // Limpiar todos los timeouts activos
+    playbackTimeouts.forEach(timeout => {
+      clearTimeout(timeout)
+    })
+    setPlaybackTimeouts([])
+    
+    // Detener todas las notas que puedan estar sonando
+    if (synth) {
+      synth.releaseAll()
+    }
+  }, [synth, playbackTimeouts])
+
+  const resumePlayback = useCallback(() => {
+    console.log('Resuming playback')
+    if (currentlyPlayingRecording && !isPlaying) {
+      setIsPlaying(true)
+      // Reanudar desde donde se pausó (simplificado: reiniciar)
+      playRecording(currentlyPlayingRecording)
+    }
+  }, [currentlyPlayingRecording, isPlaying, playRecording])
+
+  const stopPlayback = useCallback(() => {
+    console.log('Stopping playback')
+    setIsPlaying(false)
+    setCurrentlyPlayingRecording(null)
+    setPlaybackPosition(0)
+    
+    // Limpiar todos los timeouts activos
+    playbackTimeouts.forEach(timeout => {
+      clearTimeout(timeout)
+    })
+    setPlaybackTimeouts([])
+    
+    // Detener todas las notas que puedan estar sonando
+    if (synth) {
+      synth.releaseAll()
+    }
+  }, [synth, playbackTimeouts])
 
   // Tocar una nota con octava específica
   const playNoteWithOctave = useCallback(
@@ -559,8 +909,6 @@ export default function VirtualPiano() {
       window.removeEventListener("keyup", handleKeyUp)
     }
   }, [playNoteWithOctave, releaseNoteWithOctave, pressedKeys, currentOctave, audioInitialized, initAudio, keyMapping])
-
-
 
   // Componente de tecla individual
   const PianoKey = ({ 
@@ -807,6 +1155,7 @@ export default function VirtualPiano() {
                       </>
                     )}
                   </Button>
+                  
                   {recordings.length > 0 && (
                     <div className="text-xs text-gray-400">
                       {recordings.length} grabación{recordings.length !== 1 ? 'es' : ''}
@@ -942,7 +1291,8 @@ export default function VirtualPiano() {
                         {(recording.duration / 1000).toFixed(1)}s • {recording.notes.length} notas
                       </div>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 flex-wrap">
+                      {/* Botones originales */}
                       <Button
                         onClick={() => exportToMidi(recording)}
                         size="sm"
@@ -959,6 +1309,54 @@ export default function VirtualPiano() {
                         <Save className="w-3 h-3 mr-1" />
                         Tutorial
                       </Button>
+                      <Button
+                        onClick={() => handleDeleteRecording(recording.id)}
+                        size="sm"
+                        className="bg-red-600 hover:bg-red-700 text-white"
+                      >
+                        <Trash2 className="w-3 h-3 mr-1" />
+                        Eliminar
+                      </Button>
+                      
+                      {/* Control de reproducción dinámico */}
+                      {currentlyPlayingRecording?.id === recording.id ? (
+                        <div className="flex gap-1">
+                          <Button
+                            onClick={isPlaying ? pausePlayback : resumePlayback}
+                            size="sm"
+                            className="bg-yellow-600 hover:bg-yellow-700 text-white min-w-[60px]"
+                          >
+                            {isPlaying ? (
+                              <>
+                                <Square className="w-3 h-3 mr-1" />
+                                Pausa
+                              </>
+                            ) : (
+                              <>
+                                <Play className="w-3 h-3 mr-1" />
+                                Play
+                              </>
+                            )}
+                          </Button>
+                          <Button
+                            onClick={stopPlayback}
+                            size="sm"
+                            className="bg-red-600 hover:bg-red-700 text-white"
+                          >
+                            <RotateCcw className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button
+                          onClick={() => playRecording(recording)}
+                          size="sm"
+                          className="bg-yellow-600 hover:bg-yellow-700 text-white"
+                          disabled={isPlaying && currentlyPlayingRecording?.id !== recording.id}
+                        >
+                          <Play className="w-3 h-3 mr-1" />
+                          Play
+                        </Button>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -979,6 +1377,27 @@ export default function VirtualPiano() {
       {/* Modal de bienvenida */}
       {showWelcomeModal && (
         <WelcomeModal onStart={handleWelcomeStart} />
+      )}
+
+      {/* Modal de guardado de grabación */}
+      <SaveRecordingModal
+        isOpen={showSaveModal}
+        onClose={() => {
+          console.log('Modal closed by user')
+          setShowSaveModal(false)
+          setPendingRecording(null)
+        }}
+        onSave={handleSaveRecording}
+        recording={pendingRecording}
+        isSaving={isSaving}
+      />
+      {/* Debug info */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="fixed bottom-4 right-4 bg-black bg-opacity-50 text-white p-2 text-xs">
+          Modal: {showSaveModal ? 'OPEN' : 'CLOSED'} | 
+          Pending: {pendingRecording ? 'YES' : 'NO'} |
+          Recording: {isRecording ? 'YES' : 'NO'}
+        </div>
       )}
     </div>
   )
