@@ -164,3 +164,31 @@
   cursor: pointer;
   border: 2px solid #374151;
 }
+
+/* Estilos personalizados para scroll horizontal del piano */
+.piano-container .overflow-x-auto::-webkit-scrollbar {
+  height: 12px;
+}
+
+.piano-container .overflow-x-auto::-webkit-scrollbar-track {
+  background: #1f2937;
+  border-radius: 6px;
+  margin: 0 10px;
+}
+
+.piano-container .overflow-x-auto::-webkit-scrollbar-thumb {
+  background: #4b5563;
+  border-radius: 6px;
+  border: 2px solid #1f2937;
+}
+
+.piano-container .overflow-x-auto::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
+}
+
+/* Mejoras de rendimiento para scroll */
+.piano-container .overflow-x-auto {
+  scroll-behavior: smooth;
+  scrollbar-width: thin;
+  scrollbar-color: #4b5563 #1f2937;
+}

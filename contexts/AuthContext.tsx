@@ -48,7 +48,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         }
       } catch (error) {
-        console.error('Error checking auth status:', error)
+        // Token inválido o error de red, limpiar localStorage silenciosamente
+        console.log('Auth check failed, clearing stored credentials')
         localStorage.removeItem('authToken')
         localStorage.removeItem('userData')
       } finally {

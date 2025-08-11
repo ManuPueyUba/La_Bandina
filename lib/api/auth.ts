@@ -109,11 +109,16 @@ export async function getCurrentUser(token: string): Promise<User> {
   })
 }
 
-// Función para validar token
+// Función para validar token (silenciosa, no hace log de errores)
 export async function validateToken(token: string): Promise<boolean> {
   try {
-    await getCurrentUser(token)
-    return true
+    const response = await fetch(`${API_BASE_URL}/api/v1/users/me`, {
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+    })
+    return response.ok
   } catch {
     return false
   }

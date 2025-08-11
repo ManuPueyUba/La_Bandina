@@ -90,11 +90,8 @@ export default function SongsPage() {
       setCustomSongs(JSON.parse(savedCustomSongs));
     }
 
-    // Initialize audio automatically
-    if (!audioInitialized) {
-      initAudio();
-    }
-  }, [audioInitialized, initAudio]);
+    // NO inicializar audio automáticamente - esperar interacción del usuario
+  }, []);
 
   // Save favorites to localStorage
   useEffect(() => {
@@ -113,10 +110,24 @@ export default function SongsPage() {
     }
   }, [highlightedKeys]);
 
-  const handleSelectSong = useCallback((song: Song) => {
+  // Limpiar variables globales al desmontar el componente
+  useEffect(() => {
+    return () => {
+      if (typeof window !== 'undefined') {
+        delete (window as any).tutorialHighlightedKeys;
+        delete (window as any).tutorialUpcomingNotes;
+      }
+    };
+  }, []);
+
+  const handleSelectSong = useCallback(async (song: Song) => {
+    // Inicializar audio con la interacción del usuario
+    if (!audioInitialized) {
+      await initAudio();
+    }
     startTutorial(song);
     setShowTutorial(true);
-  }, [startTutorial]);
+  }, [startTutorial, audioInitialized, initAudio]);
 
   const handleToggleFavorite = useCallback((songId: string) => {
     setFavorites(prev => {

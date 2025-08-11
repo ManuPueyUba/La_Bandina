@@ -11,6 +11,7 @@ import Link from "next/link"
 import { AuthButton } from "@/components/auth/AuthButton"
 import { ApiClient, CreateRecordingRequest, RecordingResponse, KeyMappingApiClient } from "@/lib/api"
 import { useAuth } from "@/contexts/AuthContext"
+import { WelcomeModal } from "@/components/ui/WelcomeModal"
 
 // Tipos para las notas y escalas
 type Note = string
@@ -81,7 +82,7 @@ export default function VirtualPiano() {
   const [synth, setSynth] = useState<Tone.PolySynth | null>(null)
   const [pressedKeys, setPressedKeys] = useState<Set<string>>(new Set())
   const [currentOctave, setCurrentOctave] = useState(4)
-  const numberOfOctaves = 3 // Fijo en 3 octavas
+  const [numberOfOctaves, setNumberOfOctaves] = useState(3) // Ahora es configurable
   const [currentScale, setCurrentScale] = useState<Scale>("chromatic")
   const [volume, setVolume] = useState(-10)
   const [audioInitialized, setAudioInitialized] = useState(false)
@@ -95,6 +96,7 @@ export default function VirtualPiano() {
   const [currentRecording, setCurrentRecording] = useState<RecordedNote[]>([])
   const [recordings, setRecordings] = useState<Recording[]>([])
   const [recordingStartTime, setRecordingStartTime] = useState<number | null>(null)
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false)
 
   const pressedNotesRef = useRef<Map<string, number>>(new Map())
 
@@ -158,6 +160,19 @@ export default function VirtualPiano() {
     return () => clearInterval(interval);
   }, []); // Sin dependencias para evitar re-renders
 
+  // Limpiar teclas destacadas al montar el componente (navegación desde tutoriales)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      // Limpiar las variables globales del tutorial
+      delete (window as any).tutorialHighlightedKeys;
+      delete (window as any).tutorialUpcomingNotes;
+      
+      // Asegurar que los estados locales estén limpios
+      setTutorialHighlightedKeys(new Set());
+      setTutorialUpcomingNotes([]);
+    }
+  }, []); // Solo ejecutar al montar
+
   // Inicializar el sintetizador
   const initAudio = async () => {
     try {
@@ -184,6 +199,34 @@ export default function VirtualPiano() {
       console.error('Error initializing audio:', error)
     }
   }
+
+  // Manejar el inicio desde el modal de bienvenida
+  const handleWelcomeStart = async () => {
+    await initAudio()
+    setShowWelcomeModal(false)
+    // Marcar que el modal ya fue mostrado en esta sesión
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('pianoWelcomeShown', 'true')
+    }
+  }
+
+  // Gestionar la visibilidad del modal de bienvenida
+  useEffect(() => {
+    // Si el audio ya está inicializado, ocultar el modal
+    if (audioInitialized) {
+      setShowWelcomeModal(false)
+    }
+  }, [audioInitialized])
+
+  // Verificar si es la primera visita en esta sesión
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const hasVisited = sessionStorage.getItem('pianoWelcomeShown')
+      if (!hasVisited && !audioInitialized) {
+        setShowWelcomeModal(true)
+      }
+    }
+  }, [])
 
   // Limpiar sintetizador al desmontar
   useEffect(() => {
@@ -554,7 +597,7 @@ export default function VirtualPiano() {
                     : "bg-gray-900 hover:bg-gray-800"
                 }
                ${isPressed ? "transform translate-y-1 shadow-inner" : "shadow-md"}`
-              : `flex-1 min-w-0 h-72 border border-gray-300 rounded-b-md
+              : `w-full h-72 border border-gray-300 rounded-b-md
                ${isTutorialHighlighted 
                   ? "bg-blue-100 border-blue-300 hover:bg-blue-200" 
                   : isTutorialUpcoming
@@ -616,71 +659,86 @@ export default function VirtualPiano() {
     if (currentScale === "chromatic") {
       // Teclado completo con teclas negras para múltiples octavas
       const whiteKeys = ["C", "D", "E", "F", "G", "A", "B"]
-      const blackKeys = ["C#", "D#", null, "F#", "G#", "A#", null] // null para espacios
+      
+      // Calcular ancho total necesario (cada octava tiene 7 teclas blancas de 60px)
+      const totalWidth = numberOfOctaves * 7 * 60
 
       return (
-        <div className="w-full flex">
-          {octaves.map((octave) => (
-            <div key={octave} className="relative flex flex-1">
-              {/* Teclas blancas */}
-              <div className="flex flex-1">
-                {whiteKeys.map((note) => (
-                  <PianoKey key={`${note}-${octave}`} note={note} octave={octave} />
-                ))}
-              </div>
+        <div className="w-full overflow-x-auto overflow-y-visible">
+          <div className="relative flex" style={{ width: `${totalWidth}px`, minWidth: '100%' }}>
+            {octaves.map((octave) => (
+              <div key={octave} className="relative flex" style={{ width: '420px' }}>
+                {/* Teclas blancas */}
+                <div className="flex">
+                  {whiteKeys.map((note) => (
+                    <div key={`${note}-${octave}`} style={{ width: '60px' }}>
+                      <PianoKey note={note} octave={octave} />
+                    </div>
+                  ))}
+                </div>
 
-              {/* Teclas negras - posicionadas correctamente entre las blancas */}
-              <div className="absolute top-0 left-0 w-full flex pointer-events-none">
-                {/* C# - entre C y D */}
-                <div className="flex-1 flex justify-center pl-4">
-                  <div className="pointer-events-auto">
+                {/* Teclas negras - posicionadas correctamente entre las blancas */}
+                <div className="absolute top-0 left-0 pointer-events-none" style={{ width: '420px' }}>
+                  {/* C# - entre C y D (posición 60px - 14px = 46px desde el borde izquierdo) */}
+                  <div 
+                    className="absolute pointer-events-auto" 
+                    style={{ left: '46px' }}
+                  >
                     <PianoKey note="C#" octave={octave} isBlack />
                   </div>
-                </div>
-                {/* D# - entre D y E */}
-                <div className="flex-1 flex justify-center pl-4">
-                  <div className="pointer-events-auto">
+                  
+                  {/* D# - entre D y E (posición 120px - 14px = 106px desde el borde izquierdo) */}
+                  <div 
+                    className="absolute pointer-events-auto" 
+                    style={{ left: '106px' }}
+                  >
                     <PianoKey note="D#" octave={octave} isBlack />
                   </div>
-                </div>
-                {/* Espacio para E (sin sostenido) */}
-                <div className="flex-1"></div>
-                {/* F# - entre F y G */}
-                <div className="flex-1 flex justify-center pl-4">
-                  <div className="pointer-events-auto">
+                  
+                  {/* F# - entre F y G (posición 240px - 14px = 226px desde el borde izquierdo) */}
+                  <div 
+                    className="absolute pointer-events-auto" 
+                    style={{ left: '226px' }}
+                  >
                     <PianoKey note="F#" octave={octave} isBlack />
                   </div>
-                </div>
-                {/* G# - entre G y A */}
-                <div className="flex-1 flex justify-center pl-4">
-                  <div className="pointer-events-auto">
+                  
+                  {/* G# - entre G y A (posición 300px - 14px = 286px desde el borde izquierdo) */}
+                  <div 
+                    className="absolute pointer-events-auto" 
+                    style={{ left: '286px' }}
+                  >
                     <PianoKey note="G#" octave={octave} isBlack />
                   </div>
-                </div>
-                {/* A# - entre A y B */}
-                <div className="flex-1 flex justify-center pl-4">
-                  <div className="pointer-events-auto">
+                  
+                  {/* A# - entre A y B (posición 360px - 14px = 346px desde el borde izquierdo) */}
+                  <div 
+                    className="absolute pointer-events-auto" 
+                    style={{ left: '346px' }}
+                  >
                     <PianoKey note="A#" octave={octave} isBlack />
                   </div>
                 </div>
-                {/* Espacio para B (sin sostenido) */}
-                <div className="flex-1"></div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       )
     } else {
       // Solo teclas de la escala seleccionada para múltiples octavas
       return (
-        <div className="flex overflow-x-auto">
-          {octaves.map((octave) => (
-            <div key={octave} className="flex border-r border-gray-200 pr-2 mr-2 last:border-r-0 last:pr-0 last:mr-0">
-              {notes.map((note) => (
-                <PianoKey key={`${note}-${octave}`} note={note} octave={octave} />
-              ))}
-            </div>
-          ))}
+        <div className="w-full overflow-x-auto">
+          <div className="flex" style={{ minWidth: 'fit-content' }}>
+            {octaves.map((octave) => (
+              <div key={octave} className="flex border-r border-gray-200 pr-2 mr-2 last:border-r-0 last:pr-0 last:mr-0">
+                {notes.map((note) => (
+                  <div key={`${note}-${octave}`} style={{ width: '60px', flexShrink: 0 }}>
+                    <PianoKey note={note} octave={octave} />
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
         </div>
       )
     }
@@ -794,6 +852,35 @@ export default function VirtualPiano() {
                 </button>
               </div>
 
+              {/* Panel central - Rango */}
+              <div className="flex items-center space-x-3">
+                <span className="text-sm text-gray-400">Rango:</span>
+                <button
+                  onClick={() => setNumberOfOctaves(Math.max(1, numberOfOctaves - 1))}
+                  disabled={numberOfOctaves <= 1}
+                  className="w-8 h-8 rounded bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-white"
+                >
+                  -
+                </button>
+                <span className="font-mono text-lg text-white min-w-[2rem] text-center">
+                  {numberOfOctaves}
+                </span>
+                <button
+                  onClick={() => {
+                    const newOctaves = Math.min(7, numberOfOctaves + 1)
+                    setNumberOfOctaves(newOctaves)
+                    // Ajustar octava base si es necesario
+                    if (currentOctave + newOctaves > 7) {
+                      setCurrentOctave(Math.max(1, 8 - newOctaves))
+                    }
+                  }}
+                  disabled={numberOfOctaves >= 7}
+                  className="w-8 h-8 rounded bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-white"
+                >
+                  +
+                </button>
+              </div>
+
               {/* Panel derecho - Volumen */}
               <div className="flex items-center space-x-3">
                 <Volume2 className="w-4 h-4 text-gray-400" />
@@ -836,7 +923,7 @@ export default function VirtualPiano() {
 
             {/* Piano */}
             <div className="flex justify-center items-center">
-              <div className="w-full max-w-7xl">
+              <div className="w-full max-w-7xl piano-container">
                 {renderKeyboard()}
               </div>
             </div>
@@ -888,6 +975,11 @@ export default function VirtualPiano() {
           </div>
         </div>
       </div>
+
+      {/* Modal de bienvenida */}
+      {showWelcomeModal && (
+        <WelcomeModal onStart={handleWelcomeStart} />
+      )}
     </div>
   )
 }
