@@ -14,47 +14,122 @@ export default function TutorialPiano({ highlightedKeys, onKeyPress, onKeyReleas
   const [pressedKeys, setPressedKeys] = useState<Set<string>>(new Set());
   const [audioInitialized, setAudioInitialized] = useState(false);
   const [keyMapping, setKeyMapping] = useState<{ [key: string]: { note: string; octaveOffset: number } }>({});
-  const [currentOctave] = useState(4); // Octava base
+  const [currentOctave] = useState(0); // Ya no se usa como base, cada tecla tiene su octava absoluta
 
   // Debug: log cuando cambian las teclas resaltadas
   useEffect(() => {
     console.log('TutorialPiano - Highlighted keys changed:', Array.from(highlightedKeys));
   }, [highlightedKeys]);
 
-  // Mapeo por defecto de teclas del teclado físico a notas (mismo que la página principal)
+  // Mapeo expandido con mayúsculas y minúsculas para piano completo (88 teclas)
   const DEFAULT_KEY_MAPPING: { [key: string]: { note: string; octaveOffset: number } } = {
-    // Octava base (octaveOffset: 0)
-    a: { note: "C", octaveOffset: 0 },
-    w: { note: "C#", octaveOffset: 0 },
-    s: { note: "D", octaveOffset: 0 },
-    e: { note: "D#", octaveOffset: 0 },
-    d: { note: "E", octaveOffset: 0 },
-    f: { note: "F", octaveOffset: 0 },
-    t: { note: "F#", octaveOffset: 0 },
-    g: { note: "G", octaveOffset: 0 },
-    y: { note: "G#", octaveOffset: 0 },
-    h: { note: "A", octaveOffset: 0 },
-    u: { note: "A#", octaveOffset: 0 },
-    j: { note: "B", octaveOffset: 0 },
-    
-    // Primera octava superior (octaveOffset: 1)
-    k: { note: "C", octaveOffset: 1 },
-    o: { note: "C#", octaveOffset: 1 },
-    l: { note: "D", octaveOffset: 1 },
-    p: { note: "D#", octaveOffset: 1 },
-    ";": { note: "E", octaveOffset: 1 },
-    z: { note: "F", octaveOffset: 1 },
-    x: { note: "G", octaveOffset: 1 },
-    c: { note: "A", octaveOffset: 1 },
-    v: { note: "B", octaveOffset: 1 },
-    
-    // Segunda octava superior (octaveOffset: 2)
-    b: { note: "C", octaveOffset: 2 },
-    n: { note: "D", octaveOffset: 2 },
-    m: { note: "E", octaveOffset: 2 },
-    ",": { note: "F", octaveOffset: 2 },
-    ".": { note: "G", octaveOffset: 2 },
-    "/": { note: "A", octaveOffset: 2 },
+    // ===== OCTAVAS GRAVES =====
+    // Octava 0 (A0-B0) - Teclas de números
+    "1": { note: "A", octaveOffset: 0 },
+    "!": { note: "A#", octaveOffset: 0 },
+    "2": { note: "B", octaveOffset: 0 },
+
+    // Octava 1 (C1-B1) - Teclas de números superiores
+    "3": { note: "C", octaveOffset: 1 },
+    "#": { note: "C#", octaveOffset: 1 },
+    "4": { note: "D", octaveOffset: 1 },
+    "$": { note: "D#", octaveOffset: 1 },
+    "5": { note: "E", octaveOffset: 1 },
+    "6": { note: "F", octaveOffset: 1 },
+    "^": { note: "F#", octaveOffset: 1 },
+    "7": { note: "G", octaveOffset: 1 },
+    "&": { note: "G#", octaveOffset: 1 },
+    "8": { note: "A", octaveOffset: 1 },
+    "*": { note: "A#", octaveOffset: 1 },
+    "9": { note: "B", octaveOffset: 1 },
+
+    // Octava 2 (C2-B2) - Primera fila del teclado QWERTY (minúsculas)
+    "q": { note: "C", octaveOffset: 2 },
+    "w": { note: "C#", octaveOffset: 2 },
+    "e": { note: "D", octaveOffset: 2 },
+    "r": { note: "D#", octaveOffset: 2 },
+    "t": { note: "E", octaveOffset: 2 },
+    "y": { note: "F", octaveOffset: 2 },
+    "u": { note: "F#", octaveOffset: 2 },
+    "i": { note: "G", octaveOffset: 2 },
+    "o": { note: "G#", octaveOffset: 2 },
+    "p": { note: "A", octaveOffset: 2 },
+    "[": { note: "A#", octaveOffset: 2 },
+    "]": { note: "B", octaveOffset: 2 },
+
+    // Octava 3 (C3-B3) - Primera fila del teclado QWERTY (mayúsculas)
+    "Q": { note: "C", octaveOffset: 3 },
+    "W": { note: "C#", octaveOffset: 3 },
+    "E": { note: "D", octaveOffset: 3 },
+    "R": { note: "D#", octaveOffset: 3 },
+    "T": { note: "E", octaveOffset: 3 },
+    "Y": { note: "F", octaveOffset: 3 },
+    "U": { note: "F#", octaveOffset: 3 },
+    "I": { note: "G", octaveOffset: 3 },
+    "O": { note: "G#", octaveOffset: 3 },
+    "P": { note: "A", octaveOffset: 3 },
+    "{": { note: "A#", octaveOffset: 3 },
+    "}": { note: "B", octaveOffset: 3 },
+
+    // ===== OCTAVAS MEDIAS ===== 
+    // Octava 4 (C4-B4) - Segunda fila del teclado ASDF (minúsculas)
+    "a": { note: "C", octaveOffset: 4 },
+    "s": { note: "C#", octaveOffset: 4 },
+    "d": { note: "D", octaveOffset: 4 },
+    "f": { note: "D#", octaveOffset: 4 },
+    "g": { note: "E", octaveOffset: 4 },
+    "h": { note: "F", octaveOffset: 4 },
+    "j": { note: "F#", octaveOffset: 4 },
+    "k": { note: "G", octaveOffset: 4 },
+    "l": { note: "G#", octaveOffset: 4 },
+    ";": { note: "A", octaveOffset: 4 },
+    "'": { note: "A#", octaveOffset: 4 },
+    "Enter": { note: "B", octaveOffset: 4 },
+
+    // Octava 5 (C5-B5) - Segunda fila del teclado ASDF (mayúsculas)
+    "A": { note: "C", octaveOffset: 5 },
+    "S": { note: "C#", octaveOffset: 5 },
+    "D": { note: "D", octaveOffset: 5 },
+    "F": { note: "D#", octaveOffset: 5 },
+    "G": { note: "E", octaveOffset: 5 },
+    "H": { note: "F", octaveOffset: 5 },
+    "J": { note: "F#", octaveOffset: 5 },
+    "K": { note: "G", octaveOffset: 5 },
+    "L": { note: "G#", octaveOffset: 5 },
+    ":": { note: "A", octaveOffset: 5 },
+    "\"": { note: "A#", octaveOffset: 5 },
+
+    // Octava 6 (C6-B6) - Tercera fila del teclado ZXCV (minúsculas)
+    "z": { note: "C", octaveOffset: 6 },
+    "x": { note: "C#", octaveOffset: 6 },
+    "c": { note: "D", octaveOffset: 6 },
+    "v": { note: "D#", octaveOffset: 6 },
+    "b": { note: "E", octaveOffset: 6 },
+    "n": { note: "F", octaveOffset: 6 },
+    "m": { note: "F#", octaveOffset: 6 },
+    ",": { note: "G", octaveOffset: 6 },
+    ".": { note: "G#", octaveOffset: 6 },
+    "/": { note: "A", octaveOffset: 6 },
+    "?": { note: "A#", octaveOffset: 6 },
+    " ": { note: "B", octaveOffset: 6 }, // Barra espaciadora
+
+    // ===== OCTAVAS AGUDAS =====
+    // Octava 7 (C7-B7) - Tercera fila del teclado ZXCV (mayúsculas)
+    "Z": { note: "C", octaveOffset: 7 },
+    "X": { note: "C#", octaveOffset: 7 },
+    "C": { note: "D", octaveOffset: 7 },
+    "V": { note: "D#", octaveOffset: 7 },
+    "B": { note: "E", octaveOffset: 7 },
+    "N": { note: "F", octaveOffset: 7 },
+    "M": { note: "F#", octaveOffset: 7 },
+    "<": { note: "G", octaveOffset: 7 },
+    ">": { note: "G#", octaveOffset: 7 },
+    "\\": { note: "A", octaveOffset: 7 },
+    "|": { note: "A#", octaveOffset: 7 },
+    "Tab": { note: "B", octaveOffset: 7 },
+
+    // Octava 8 (C8) - Teclas especiales
+    "0": { note: "C", octaveOffset: 8 },
   };
 
   // Cargar configuración de teclas desde localStorage (mismo sistema que la página principal)
@@ -168,10 +243,11 @@ export default function TutorialPiano({ highlightedKeys, onKeyPress, onKeyReleas
         return; // No hacer nada si hay un input enfocado o modal abierto
       }
 
-      const key = event.key.toLowerCase();
+      // Mantener case-sensitive para diferenciar A de a
+      const key = event.key;
       if (keyMapping[key]) {
         const { note, octaveOffset } = keyMapping[key];
-        const targetOctave = currentOctave + octaveOffset;
+        const targetOctave = octaveOffset; // Ahora octaveOffset ES la octava absoluta
         const noteWithOctave = `${note}${targetOctave}`;
         
         if (!pressedKeys.has(noteWithOctave)) {
@@ -200,10 +276,11 @@ export default function TutorialPiano({ highlightedKeys, onKeyPress, onKeyReleas
         return; // No hacer nada si hay un input enfocado o modal abierto
       }
 
-      const key = event.key.toLowerCase();
+      // Mantener case-sensitive para diferenciar A de a  
+      const key = event.key;
       if (keyMapping[key]) {
         const { note, octaveOffset } = keyMapping[key];
-        const targetOctave = currentOctave + octaveOffset;
+        const targetOctave = octaveOffset; // Ahora octaveOffset ES la octava absoluta
         const noteWithOctave = `${note}${targetOctave}`;
         
         if (pressedKeys.has(noteWithOctave)) {
@@ -235,7 +312,7 @@ export default function TutorialPiano({ highlightedKeys, onKeyPress, onKeyReleas
     // Buscar la tecla del teclado asignada a esta nota (mismo sistema que la página principal)
     const keyboardKey = Object.keys(keyMapping).find((k) => {
       const mapping = keyMapping[k];
-      return mapping.note === note && (currentOctave + mapping.octaveOffset) === octave;
+      return mapping.note === note && mapping.octaveOffset === octave;
     });
 
     return (
@@ -323,33 +400,57 @@ export default function TutorialPiano({ highlightedKeys, onKeyPress, onKeyReleas
     );
   };
 
-  // Renderizar teclado cromático con 3 octavas
+  // Renderizar teclado cromático completo (88 teclas: A0 a C8)
   const renderKeyboard = () => {
-    const octaves = [4, 5, 6]; // 3 octavas centradas
-    const whiteKeys = ["C", "D", "E", "F", "G", "A", "B"];
-    const blackKeys = ["C#", "D#", null, "F#", "G#", "A#", null]; // null para espacios
+    // Piano completo de 88 teclas: A0 hasta C8
+    const fullPianoRange = [
+      // Octava 0: Solo A0, A#0, B0 (primeras 3 teclas)
+      { octave: 0, keys: ["A", "A#", "B"] },
+      // Octavas 1-7: Todas las notas (12 teclas cada una)
+      { octave: 1, keys: ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"] },
+      { octave: 2, keys: ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"] },
+      { octave: 3, keys: ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"] },
+      { octave: 4, keys: ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"] },
+      { octave: 5, keys: ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"] },
+      { octave: 6, keys: ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"] },
+      { octave: 7, keys: ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"] },
+      // Octava 8: Solo C8 (última tecla)
+      { octave: 8, keys: ["C"] }
+    ];
 
     return (
-      <div className="relative flex overflow-x-auto">
-        {octaves.map((octave) => (
-          <div key={octave} className="relative flex">
-            {/* Teclas blancas */}
-            <div className="flex">
-              {whiteKeys.map((note) => (
-                <PianoKey key={`${note}-${octave}`} note={note} octave={octave} />
-              ))}
-            </div>
+      <div className="relative flex overflow-x-auto pb-4">
+        <div className="flex min-w-max">
+          {fullPianoRange.map(({ octave, keys }) => {
+            // Para octavas parciales, necesitamos ajustar el layout
+            const whiteKeys = keys.filter(note => !note.includes("#"));
+            const hasBlackKeys = keys.some(note => note.includes("#"));
 
-            {/* Teclas negras */}
-            <div className="absolute top-0 left-6 flex">
-              {blackKeys.map((note, index) => (
-                <div key={`${note}-${octave}-${index}`} className="w-12 flex justify-center">
-                  {note && <PianoKey note={note} octave={octave} isBlack />}
+            return (
+              <div key={octave} className="relative flex">
+                {/* Teclas blancas */}
+                <div className="flex">
+                  {whiteKeys.map((note) => (
+                    <PianoKey key={`${note}-${octave}`} note={note} octave={octave} />
+                  ))}
                 </div>
-              ))}
-            </div>
-          </div>
-        ))}
+
+                {/* Teclas negras - solo si hay teclas negras en esta octava */}
+                {hasBlackKeys && (
+                  <div className="absolute top-0 left-6 flex">
+                    {["C#", "D#", null, "F#", "G#", "A#", null].map((note, index) => (
+                      <div key={`${note}-${octave}-${index}`} className="w-12 flex justify-center">
+                        {note && keys.includes(note) && (
+                          <PianoKey note={note} octave={octave} isBlack />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
     );
   };

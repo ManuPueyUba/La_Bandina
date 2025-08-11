@@ -10,79 +10,12 @@ interface MidiImportState {
 }
 
 /**
- * Función para transponer notas automáticamente al rango C4-B6
+ * DESHABILITADO: Función de transposición (ya no necesaria con piano completo de 88 teclas)
  */
 function transposeNotesToPianoRange(notes: any[]): any[] {
-  // Rango del piano: C4 (60) hasta B6 (95)
-  const MIN_MIDI = 60; // C4
-  const MAX_MIDI = 95; // B6
-  
-  const noteNameToMidi: { [key: string]: number } = {
-    'C': 0, 'C#': 1, 'Db': 1, 'D': 2, 'D#': 3, 'Eb': 3, 'E': 4,
-    'F': 5, 'F#': 6, 'Gb': 6, 'G': 7, 'G#': 8, 'Ab': 8, 'A': 9,
-    'A#': 10, 'Bb': 10, 'B': 11
-  };
-  
-  const midiToNoteName = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-  
-  function parseNote(noteKey: string): { note: string, octave: number, midi: number } {
-    const match = noteKey.match(/^([A-G][#b]?)(\d+)$/);
-    if (!match) {
-      console.log('⚠️ Could not parse note:', noteKey);
-      return { note: 'C', octave: 4, midi: 60 };
-    }
-    
-    const [, noteName, octaveStr] = match;
-    const octave = parseInt(octaveStr);
-    const noteValue = noteNameToMidi[noteName] || 0;
-    // Fórmula correcta: (octave * 12) + noteValue + 12 para que C4 = 60
-    const midi = (octave * 12) + noteValue + 12;
-    
-    console.log(`🎵 Parsing ${noteKey}: note=${noteName}, octave=${octave}, midi=${midi}`);
-    return { note: noteName, octave, midi };
-  }
-  
-  function midiToNoteKey(midi: number): string {
-    const octave = Math.floor((midi - 12) / 12);
-    const noteIndex = midi % 12;
-    const result = midiToNoteName[noteIndex] + octave;
-    console.log(`🎵 MIDI ${midi} → ${result}`);
-    return result;
-  }
-  
-  console.log(`🎹 Transposing ${notes.length} notes to range C4-B6 (MIDI ${MIN_MIDI}-${MAX_MIDI})`);
-  
-  return notes.map(note => {
-    const parsed = parseNote(note.key);
-    let targetMidi = parsed.midi;
-    
-    console.log(`🎵 Original: ${note.key} (MIDI ${targetMidi})`);
-    
-    // Si está fuera del rango, transponer por octavas
-    if (targetMidi < MIN_MIDI) {
-      // Subir octavas hasta estar en rango
-      while (targetMidi < MIN_MIDI) {
-        targetMidi += 12;
-      }
-      console.log(`⬆️ Transposed UP to MIDI ${targetMidi}`);
-    } else if (targetMidi > MAX_MIDI) {
-      // Bajar octavas hasta estar en rango
-      while (targetMidi > MAX_MIDI) {
-        targetMidi -= 12;
-      }
-      console.log(`⬇️ Transposed DOWN to MIDI ${targetMidi}`);
-    } else {
-      console.log(`✅ Already in range`);
-    }
-    
-    const newKey = midiToNoteKey(targetMidi);
-    console.log(`🎵 Final: ${note.key} → ${newKey}`);
-    
-    return {
-      ...note,
-      key: newKey
-    };
-  });
+  // Con piano completo A0-C8, no necesitamos transponer nada
+  console.log("🎹 Piano completo: Todas las notas A0-C8 son soportadas, sin transposición");
+  return notes;
 }
 
 export function useMidiImport() {

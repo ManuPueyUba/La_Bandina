@@ -668,19 +668,39 @@ export default function VirtualPiano() {
 
   return (
     <div className="min-h-screen bg-black text-white flex flex-col">
-      {/* Header minimalista */}
+      {/* Header con navegación directa */}
       <div className="border-b border-gray-800 bg-gray-900 flex-shrink-0">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-light text-white">Piano</h1>
             
-            {/* Botón de menú (hamburguer) */}
+            {/* Navegación principal */}
+            <div className="flex items-center space-x-6">
+              <Link href="/songs">
+                <button className="flex items-center space-x-2 px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors text-gray-300 hover:text-white">
+                  <Music className="w-4 h-4" />
+                  <span>Tutoriales</span>
+                </button>
+              </Link>
+              
+              <Link href="/config">
+                <button className="flex items-center space-x-2 px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors text-gray-300 hover:text-white">
+                  <Settings className="w-4 h-4" />
+                  <span>Configurar Teclas</span>
+                </button>
+              </Link>
+
+              <AuthButton />
+            </div>
+
+            {/* Botón de controles adicionales (opcional) */}
             <button
               onClick={() => setShowControls(!showControls)}
-              className="p-2 rounded hover:bg-gray-800 transition-colors"
+              className="p-2 rounded hover:bg-gray-800 transition-colors ml-4"
+              title="Configuración adicional"
             >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zM12 13a1 1 0 110-2 1 1 0 010 2zM12 20a1 1 0 110-2 1 1 0 010 2z" />
               </svg>
             </button>
           </div>
@@ -690,27 +710,10 @@ export default function VirtualPiano() {
       {/* Contenido principal que se expande */}
       <div className="flex-1 flex flex-col">
         <div className="max-w-7xl mx-auto px-6 py-6 w-full flex-1 flex flex-col">
-          {/* Menú desplegable simplificado */}
+          {/* Menú de configuración adicional (opcional) */}
           {showControls && (
             <div className="mb-6 bg-gray-900 border border-gray-700 rounded-lg p-6 flex-shrink-0">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Navegación */}
-                <div className="space-y-3">
-                  <h3 className="text-sm font-medium text-gray-300 uppercase tracking-wider">Navegación</h3>
-                  <div className="space-y-2">
-                    <Link href="/songs">
-                      <button className="w-full text-left p-2 rounded hover:bg-gray-800 transition-colors text-gray-300 hover:text-white">
-                        Canciones
-                      </button>
-                    </Link>
-                    <Link href="/config">
-                      <button className="w-full text-left p-2 rounded hover:bg-gray-800 transition-colors text-gray-300 hover:text-white">
-                        Configurar Teclas
-                      </button>
-                    </Link>
-                  </div>
-                </div>
-
                 {/* Configuración de Escala */}
                 <div className="space-y-3">
                   <h3 className="text-sm font-medium text-gray-300 uppercase tracking-wider">Escala</h3>
@@ -724,6 +727,24 @@ export default function VirtualPiano() {
                       <SelectItem value="minor">Menor</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+
+                {/* Configuración de Volumen */}
+                <div className="space-y-3">
+                  <h3 className="text-sm font-medium text-gray-300 uppercase tracking-wider">Volumen</h3>
+                  <div className="flex items-center space-x-3">
+                    <Volume2 className="w-4 h-4 text-gray-400" />
+                    <input
+                      type="range"
+                      min="-60"
+                      max="0"
+                      step="1"
+                      value={volume}
+                      onChange={(e) => setVolume(parseInt(e.target.value))}
+                      className="flex-1 h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                    />
+                    <span className="text-sm text-gray-400 min-w-[3rem]">{volume}dB</span>
+                  </div>
                 </div>
               </div>
             </div>

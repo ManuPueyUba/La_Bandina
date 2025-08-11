@@ -186,7 +186,7 @@ export default function SongsPage() {
             <div className="flex items-center gap-2">
               <Music className="w-6 h-6 text-blue-400" />
               <h1 className="text-2xl font-bold text-white">
-                {showTutorial ? 'Tutorial de Canción' : 'Biblioteca de Canciones'}
+                {showTutorial ? 'Tutorial de Piano' : 'Biblioteca de Tutoriales'}
               </h1>
             </div>
           </div>
@@ -194,7 +194,7 @@ export default function SongsPage() {
           {showTutorial && (
             <Button onClick={handleBackToLibrary} variant="outline" className="border-gray-600 text-gray-200 hover:bg-gray-800">
               <BookOpen className="w-4 h-4 mr-2" />
-              Ver Biblioteca
+              Ver Tutoriales
             </Button>
           )}
         </div>
