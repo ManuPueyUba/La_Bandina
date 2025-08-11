@@ -45,7 +45,7 @@ export function MidiImportDialog({ onSongsImported, onClose, isOpen }: MidiImpor
     minNoteDuration: 200
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { analyzeMidiFile, convertMultipleMidiFiles, isLoading, error, progress } = useMidiImport();
+  const { convertMultipleMidiFiles, isLoading, error, progress } = useMidiImport();
 
   if (!isOpen) return null;
 
@@ -58,27 +58,10 @@ export function MidiImportDialog({ onSongsImported, onClose, isOpen }: MidiImpor
         artist: 'Unknown',
         category: 'Importada'
       },
-      status: 'pending'
+      status: 'ready' // Saltamos el análisis, van directamente a ready
     }));
 
     setFiles(newFiles);
-
-    // Analizar cada archivo
-    for (const fileWithInfo of newFiles) {
-      try {
-        fileWithInfo.status = 'analyzing';
-        setFiles(prev => [...prev]);
-
-        const info = await analyzeMidiFile(fileWithInfo.file);
-        fileWithInfo.info = info;
-        fileWithInfo.status = 'ready';
-        setFiles(prev => [...prev]);
-      } catch (error) {
-        fileWithInfo.status = 'error';
-        fileWithInfo.error = error instanceof Error ? error.message : 'Error desconocido';
-        setFiles(prev => [...prev]);
-      }
-    }
   };
 
   const handleMetadataChange = (index: number, field: keyof MidiMetadata, value: string) => {

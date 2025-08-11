@@ -20,7 +20,6 @@ export const API_ENDPOINTS = {
   },
   midi: {
     upload: `${API_V1}/midi/upload`,
-    analyze: (id: string) => `${API_V1}/midi/${id}/analyze`,
     convert: (id: string) => `${API_V1}/midi/${id}/convert`,
   },
   health: `${API_BASE_URL}/health`,
@@ -115,6 +114,31 @@ export class ApiClient {
   static async healthCheck(): Promise<{ status: string }> {
     return this.request<{ status: string }>(API_ENDPOINTS.health)
   }
+
+  // MIDI methods
+  static async uploadMidi(file: File): Promise<MidiUploadResponse> {
+    const formData = new FormData()
+    formData.append('file', file)
+
+    const response = await fetch(API_ENDPOINTS.midi.upload, {
+      method: 'POST',
+      body: formData,
+    })
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ detail: 'Upload failed' }))
+      throw new Error(error.detail || `HTTP error! status: ${response.status}`)
+    }
+
+    return response.json()
+  }
+
+  static async convertMidi(id: string, req: MidiConversionRequest): Promise<MidiConversionResponse> {
+    return this.request<MidiConversionResponse>(API_ENDPOINTS.midi.convert(id), {
+      method: 'POST',
+      body: JSON.stringify(req),
+    })
+  }
 }
 
 // Types for API requests and responses
@@ -180,6 +204,42 @@ export interface RecordingResponse {
   description?: string
   created_at: string
   updated_at?: string
+}
+
+export interface MidiUploadResponse {
+  id: string
+  filename: string
+  file_size: number
+  message: string
+}
+
+export interface MidiConversionRequest {
+  title: string
+  artist?: string
+  category?: string
+  key_signature?: string
+  difficulty?: 'beginner' | 'intermediate' | 'advanced'
+  description?: string
+  options?: {
+    min_octave?: number
+    max_octave?: number
+    min_note_duration?: number
+    quantize_threshold?: number
+    simplify_melody?: boolean
+    remove_chords?: boolean
+    max_notes_per_second?: number
+  }
+}
+
+export interface MidiConversionResponse {
+  success: boolean
+  message: string
+  song: SongResponse
+  processing_info: {
+    notes_count: number
+    total_duration: number
+    conversion_type: string
+  }
 }
 
 export default ApiClient

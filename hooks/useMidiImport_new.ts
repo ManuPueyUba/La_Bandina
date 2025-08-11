@@ -9,82 +9,6 @@ interface MidiImportState {
   progress: number;
 }
 
-/**
- * Función para transponer notas automáticamente al rango C4-B6
- */
-function transposeNotesToPianoRange(notes: any[]): any[] {
-  // Rango del piano: C4 (60) hasta B6 (95)
-  const MIN_MIDI = 60; // C4
-  const MAX_MIDI = 95; // B6
-  
-  const noteNameToMidi: { [key: string]: number } = {
-    'C': 0, 'C#': 1, 'Db': 1, 'D': 2, 'D#': 3, 'Eb': 3, 'E': 4,
-    'F': 5, 'F#': 6, 'Gb': 6, 'G': 7, 'G#': 8, 'Ab': 8, 'A': 9,
-    'A#': 10, 'Bb': 10, 'B': 11
-  };
-  
-  const midiToNoteName = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-  
-  function parseNote(noteKey: string): { note: string, octave: number, midi: number } {
-    const match = noteKey.match(/^([A-G][#b]?)(\d+)$/);
-    if (!match) {
-      console.log('⚠️ Could not parse note:', noteKey);
-      return { note: 'C', octave: 4, midi: 60 };
-    }
-    
-    const [, noteName, octaveStr] = match;
-    const octave = parseInt(octaveStr);
-    const noteValue = noteNameToMidi[noteName] || 0;
-    // Fórmula correcta: (octave * 12) + noteValue + 12 para que C4 = 60
-    const midi = (octave * 12) + noteValue + 12;
-    
-    console.log(`🎵 Parsing ${noteKey}: note=${noteName}, octave=${octave}, midi=${midi}`);
-    return { note: noteName, octave, midi };
-  }
-  
-  function midiToNoteKey(midi: number): string {
-    const octave = Math.floor((midi - 12) / 12);
-    const noteIndex = midi % 12;
-    const result = midiToNoteName[noteIndex] + octave;
-    console.log(`🎵 MIDI ${midi} → ${result}`);
-    return result;
-  }
-  
-  console.log(`🎹 Transposing ${notes.length} notes to range C4-B6 (MIDI ${MIN_MIDI}-${MAX_MIDI})`);
-  
-  return notes.map(note => {
-    const parsed = parseNote(note.key);
-    let targetMidi = parsed.midi;
-    
-    console.log(`🎵 Original: ${note.key} (MIDI ${targetMidi})`);
-    
-    // Si está fuera del rango, transponer por octavas
-    if (targetMidi < MIN_MIDI) {
-      // Subir octavas hasta estar en rango
-      while (targetMidi < MIN_MIDI) {
-        targetMidi += 12;
-      }
-      console.log(`⬆️ Transposed UP to MIDI ${targetMidi}`);
-    } else if (targetMidi > MAX_MIDI) {
-      // Bajar octavas hasta estar en rango
-      while (targetMidi > MAX_MIDI) {
-        targetMidi -= 12;
-      }
-      console.log(`⬇️ Transposed DOWN to MIDI ${targetMidi}`);
-    } else {
-      console.log(`✅ Already in range`);
-    }
-    
-    const newKey = midiToNoteKey(targetMidi);
-    console.log(`🎵 Final: ${note.key} → ${newKey}`);
-    
-    return {
-      ...note,
-      key: newKey
-    };
-  });
-}
-
 export function useMidiImport() {
   const [state, setState] = useState<MidiImportState>({
     isLoading: false,
@@ -113,26 +37,24 @@ export function useMidiImport() {
         title: metadata.title,
         artist: metadata.artist || 'Desconocido',
         category: metadata.category || 'Importada',
-        key_signature: 'C major',
-        difficulty: 'intermediate',
         description: metadata.description,
-        // Las opciones son completamente opcionales en el backend simplificado
+        options: {
+          // Configuración simple: mantener notas tal como están
+          min_octave: 3,
+          max_octave: 7,
+          min_note_duration: 100,
+          quantize_threshold: 50,
+          simplify_melody: false,
+          remove_chords: false,
+          max_notes_per_second: 10,
+        }
       };
 
       const conversion: MidiConversionResponse = await ApiClient.convertMidi(uploaded.id, req);
       setState(prev => ({ ...prev, progress: 100, isLoading: false }));
 
-      console.log('Backend response:', conversion); // Debug log
-
       // Mapear respuesta del backend a formato frontend
       const saved: SongResponse = conversion.song;
-      
-      console.log('Saved song notes:', saved.notes); // Debug log
-      
-      // Aplicar transposición automática para que las notas estén en el rango C4-B6
-      const transposedNotes = transposeNotesToPianoRange(saved.notes);
-      console.log('Notes after transposition:', transposedNotes); // Debug log
-      
       const converted: Song = {
         id: saved.id,
         title: saved.title,
@@ -141,15 +63,7 @@ export function useMidiImport() {
         category: saved.category,
         bpm: saved.bpm,
         duration: saved.duration,
-        // Usar las notas transpuestas
-        notes: transposedNotes.map(n => {
-          console.log('Mapping note:', n); // Debug log
-          return {
-            key: n.key,
-            duration: n.duration,
-            startTime: n.start_time
-          };
-        }),
+        notes: saved.notes.map(n => ({ key: n.key, duration: n.duration, startTime: n.start_time })),
         keySignature: saved.key_signature,
         timeSignature: saved.time_signature,
         description: saved.description,
