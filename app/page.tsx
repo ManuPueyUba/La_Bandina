@@ -692,17 +692,6 @@ export default function VirtualPiano() {
 
               <AuthButton />
             </div>
-
-            {/* Botón de controles adicionales (opcional) */}
-            <button
-              onClick={() => setShowControls(!showControls)}
-              className="p-2 rounded hover:bg-gray-800 transition-colors ml-4"
-              title="Configuración adicional"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zM12 13a1 1 0 110-2 1 1 0 010 2zM12 20a1 1 0 110-2 1 1 0 010 2z" />
-              </svg>
-            </button>
           </div>
         </div>
       </div>
@@ -710,15 +699,48 @@ export default function VirtualPiano() {
       {/* Contenido principal que se expande */}
       <div className="flex-1 flex flex-col">
         <div className="max-w-7xl mx-auto px-6 py-6 w-full flex-1 flex flex-col">
-          {/* Menú de configuración adicional (opcional) */}
-          {showControls && (
-            <div className="mb-6 bg-gray-900 border border-gray-700 rounded-lg p-6 flex-shrink-0">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+          {/* Piano con controles integrados */}
+          <div className="bg-gray-900 border border-gray-700 rounded-lg p-6 flex flex-col">
+            {/* Controles superiores */}
+            <div className="flex justify-between items-center mb-2 flex-shrink-0">
+              {/* Panel izquierdo - Grabación y Escala */}
+              <div className="flex items-center space-x-6">
+                {/* Grabación */}
+                <div className="flex items-center space-x-4">
+                  <Button
+                    onClick={isRecording ? stopRecording : startRecording}
+                    className={`${
+                      isRecording 
+                        ? 'bg-red-600 hover:bg-red-700 text-white' 
+                        : 'bg-gray-700 hover:bg-gray-600 text-gray-300'
+                    } transition-colors`}
+                    size="sm"
+                  >
+                    {isRecording ? (
+                      <>
+                        <Square className="w-4 h-4 mr-2" />
+                        Parar
+                      </>
+                    ) : (
+                      <>
+                        <Mic className="w-4 h-4 mr-2" />
+                        Grabar
+                      </>
+                    )}
+                  </Button>
+                  {recordings.length > 0 && (
+                    <div className="text-xs text-gray-400">
+                      {recordings.length} grabación{recordings.length !== 1 ? 'es' : ''}
+                    </div>
+                  )}
+                </div>
+
                 {/* Configuración de Escala */}
-                <div className="space-y-3">
-                  <h3 className="text-sm font-medium text-gray-300 uppercase tracking-wider">Escala</h3>
+                <div className="flex items-center space-x-3">
+                  <span className="text-sm text-gray-400">Escala:</span>
                   <Select value={currentScale} onValueChange={(value: Scale) => setCurrentScale(value)}>
-                    <SelectTrigger className="bg-gray-700 border-gray-600 text-white">
+                    <SelectTrigger className="w-32 bg-gray-700 border-gray-600 text-white text-sm">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="bg-gray-800 border-gray-600">
@@ -728,60 +750,6 @@ export default function VirtualPiano() {
                     </SelectContent>
                   </Select>
                 </div>
-
-                {/* Configuración de Volumen */}
-                <div className="space-y-3">
-                  <h3 className="text-sm font-medium text-gray-300 uppercase tracking-wider">Volumen</h3>
-                  <div className="flex items-center space-x-3">
-                    <Volume2 className="w-4 h-4 text-gray-400" />
-                    <input
-                      type="range"
-                      min="-60"
-                      max="0"
-                      step="1"
-                      value={volume}
-                      onChange={(e) => setVolume(parseInt(e.target.value))}
-                      className="flex-1 h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
-                    />
-                    <span className="text-sm text-gray-400 min-w-[3rem]">{volume}dB</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Piano con controles integrados */}
-          <div className="bg-gray-900 border border-gray-700 rounded-lg p-6 flex flex-col">
-            {/* Controles superiores */}
-            <div className="flex justify-between items-center mb-2 flex-shrink-0">
-              {/* Panel izquierdo - Grabación */}
-              <div className="flex items-center space-x-4">
-                <Button
-                  onClick={isRecording ? stopRecording : startRecording}
-                  className={`${
-                    isRecording 
-                      ? 'bg-red-600 hover:bg-red-700 text-white' 
-                      : 'bg-gray-700 hover:bg-gray-600 text-gray-300'
-                  } transition-colors`}
-                  size="sm"
-                >
-                  {isRecording ? (
-                    <>
-                      <Square className="w-4 h-4 mr-2" />
-                      Parar
-                    </>
-                  ) : (
-                    <>
-                      <Mic className="w-4 h-4 mr-2" />
-                      Grabar
-                    </>
-                  )}
-                </Button>
-                {recordings.length > 0 && (
-                  <div className="text-xs text-gray-400">
-                    {recordings.length} grabación{recordings.length !== 1 ? 'es' : ''}
-                  </div>
-                )}
               </div>
 
               {/* Panel central - Octava */}
